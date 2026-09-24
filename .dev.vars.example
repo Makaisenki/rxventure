@@ -1,0 +1,4 @@
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
+SUPABASE_ANON_KEY=your-public-anon-key
+ADMIN_EMAIL=admin@example.org
