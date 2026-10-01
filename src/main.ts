@@ -82,6 +82,13 @@ function playTreasureFanfare() {
   [523.25, 659.25, 783.99].forEach((note) => tone(note, now + 1.05, 1.7, .05, 'sine'));
   [1046.5, 1318.51].forEach((note, i) => tone(note, now + 1.35 + i * .16, 1.1, .045, 'sine'));
 }
+function playGameOver() {
+  if (!settings.sound) return;
+  const now = audio().currentTime + .04;
+  tone(196, now, .5, .07, 'triangle', undefined, 110);
+  tone(146.83, now + .16, .65, .06, 'sawtooth', undefined, 73.42);
+  noise(now + .08, .55, .025);
+}
 function damageFlash() { document.body.classList.add('damage-flash'); window.setTimeout(() => document.body.classList.remove('damage-flash'), 520); }
 function shuffler(question: Question) { return question.options.map((text, i) => ({ text, letter: String.fromCharCode(65 + i) })).sort(() => Math.random() - .5); }
 
@@ -111,9 +118,10 @@ const settingsView = () => `<section class="panel"><p class="eyebrow">Quest sett
 const adminLogin = () => `<section class="panel admin-pin"><p class="eyebrow">Protected chamber</p><h2>Administrator sign in</h2><p>Use the shared administrator account to manage the cloud question bank and leaderboards.</p><form data-login-form><label for="admin-email">Email</label><input id="admin-email" data-admin-email type="email" autocomplete="username" required/><label for="admin-password">Password</label><input id="admin-password" data-admin-password type="password" autocomplete="current-password" required/><p class="pin-error" role="alert">${adminError}</p><button class="primary" type="submit">Sign in</button><button type="button" data-go="title">Cancel</button></form></section>`;
 const admin = () => `<section class="panel admin"><p class="eyebrow">Administrator's chamber</p><h2>Question bank</h2><p>Replace the shared question bank only with a workbook that validates every role’s 50-question pool. Player scores are not changed.</p><input type="file" accept=".xlsx" data-upload/><button data-restore>Restore bundled question bank</button><button data-clear>Clear all shared leaderboards</button><button data-sign-out>Sign out</button><button data-go="title">Back</button></section>`;
 const victory = () => `<section class="panel victory"><img class="chest" src="/assets/medicine-chest.png" alt="An open enchanted medicine chest"/><p class="eyebrow">The vault is open</p><h2>You found the sacred treasure!</h2><p>Your final score: <b>${score}</b></p><label>Enter your adventurer nickname <input maxlength="16" data-name autofocus /></label><button class="primary" data-save-score>Claim your place</button></section>`;
-const gameover = () => `<section class="panel"><p class="eyebrow">The dungeon prevailed</p><h2>Your five lives are gone.</h2><p>Every new run summons a new set of questions.</p><button class="primary" data-play-again>Try again</button><button data-go="roles">Choose another role</button></section>`;
+const gameover = () => `<section class="panel"><p class="eyebrow">The dungeon prevailed</p><h2>Your five lives are gone.</h2><p>Return to your pharmacy and prepare yourself further.</p><button class="primary" data-play-again>Try again</button><button data-go="title">Return to main menu</button></section>`;
 
 function bind(layer: Element) {
+  if (view === 'title') layer.addEventListener('pointerdown', () => startMusic(), { once: true });
   layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; if (view === 'prologue') startMusic(); if (view === 'title' || view === 'leaderboard' || view === 'settings') stopMusic(); render(); if (view === 'leaderboard') showScores(0); });
   layer.querySelectorAll<HTMLElement>('[data-role]').forEach((button) => button.onclick = () => start(button.dataset.role as Role));
   layer.querySelectorAll<HTMLElement>('[data-option]').forEach((button) => button.onclick = () => choose(Number(button.dataset.option)));
@@ -144,7 +152,7 @@ async function showScores(index: number) { const list = document.querySelector('
 function start(role: Role) { chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; startMusic(); render(); beginTimer(); }
 function beginTimer(reset = true) { stopTimer(); if (reset) { graceLeft = 10; timeLeft = 10; } timer = window.setInterval(() => { if (graceLeft > 0) graceLeft = Math.max(0, graceLeft - .1); else timeLeft = Math.max(0, timeLeft - .1); const target = document.querySelector('.hud b'); if (target) target.textContent = graceLeft > 0 ? `⌛ Bonus begins in ${graceLeft.toFixed(1)}s` : timeLeft > 0 ? `⌛ Bonus ${timeLeft.toFixed(1)}s` : '⌛ Score locked'; }, 100); }
 function choose(optionIndex: number) { if (resolving) return; if (expanded !== optionIndex) { playDoorSelect(); expanded = optionIndex; render(); return; } const option = displayedOptions[optionIndex]; answer(option.letter === run[index].answer); }
-function answer(correct: boolean) { stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; if (correct) playCorrect(); else { playDamage(); damageFlash(); } if (correct) score += graceLeft > 0 ? 100 : Math.max(0, Math.ceil(timeLeft * 10)); else lives -= 1; expanded = -1; render(); window.setTimeout(() => { reaction = 'idle'; resolving = false; if (!correct && lives <= 0) { stopMusic(); view = 'gameover'; render(); return; } index += 1; if (index >= 50) { view = 'victory'; playTreasureFanfare(); render(); return; } if (index % 10 === 0) playBiomeTransition(); displayedOptions = shuffler(run[index]); render(); beginTimer(); }, settings.reduced ? 0 : 650); }
+function answer(correct: boolean) { stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; if (correct) playCorrect(); else { playDamage(); damageFlash(); } if (correct) score += graceLeft > 0 ? 100 : Math.max(0, Math.ceil(timeLeft * 10)); else lives -= 1; expanded = -1; render(); window.setTimeout(() => { reaction = 'idle'; resolving = false; if (!correct && lives <= 0) { playGameOver(); stopMusic(); view = 'gameover'; render(); return; } index += 1; if (index >= 50) { view = 'victory'; playTreasureFanfare(); render(); return; } if (index % 10 === 0) playBiomeTransition(); displayedOptions = shuffler(run[index]); render(); beginTimer(); }, settings.reduced ? 0 : 650); }
 
 async function bootstrap() { const response = await fetch('/question-bank.xlsx'); defaultBank = parseWorkbook(await response.arrayBuffer()); try { const active = await fetchActiveBank(); bank = active ?? defaultBank; cloudOnline = Boolean(active); } catch { bank = defaultBank; cloudOnline = false; } render(); }
 bootstrap().catch((error) => { app.innerHTML = `<pre>Unable to load question bank: ${error instanceof Error ? error.message : String(error)}</pre>`; });
