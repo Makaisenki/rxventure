@@ -18,7 +18,7 @@ let reaction: 'idle' | 'correct' | 'wrong' = 'idle';
 let displayedOptions: { text: string; letter: string }[] = [];
 let adminError = '';
 let cloudOnline = false;
-let settings = JSON.parse(localStorage.getItem(KEY.settings) || '{"sound":false,"contrast":false,"large":false,"reduced":false}');
+let settings = JSON.parse(localStorage.getItem(KEY.settings) || '{"sound":true,"contrast":false,"large":false,"reduced":false}');
 
 class AmbientScene extends Phaser.Scene {
   constructor() { super('ambient'); }
@@ -36,7 +36,53 @@ new Phaser.Game({ type: Phaser.AUTO, parent: app, width: 1600, height: 900, tran
 
 function saveSettings() { localStorage.setItem(KEY.settings, JSON.stringify(settings)); }
 function stopTimer() { if (timer) window.clearInterval(timer); timer = undefined; }
-function beep(ok: boolean) { if (!settings.sound) return; const ctx = new AudioContext(); const oscillator = ctx.createOscillator(); const gain = ctx.createGain(); oscillator.frequency.value = ok ? 660 : 180; gain.gain.value = .04; oscillator.connect(gain).connect(ctx.destination); oscillator.start(); oscillator.stop(ctx.currentTime + .13); }
+let audioContext: AudioContext | undefined;
+let musicGain: GainNode | undefined;
+let musicTimer: number | undefined;
+let musicPlaying = false;
+
+function audio() {
+  audioContext ??= new AudioContext();
+  if (audioContext.state === 'suspended') void audioContext.resume();
+  return audioContext;
+}
+function tone(frequency: number, at: number, duration: number, volume: number, type: OscillatorType = 'sine', destination?: AudioNode, endFrequency?: number) {
+  const ctx = audio(); const oscillator = ctx.createOscillator(); const gain = ctx.createGain();
+  oscillator.type = type; oscillator.frequency.setValueAtTime(frequency, at);
+  if (endFrequency) oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), at + duration);
+  gain.gain.setValueAtTime(.0001, at); gain.gain.exponentialRampToValueAtTime(volume, at + .02); gain.gain.exponentialRampToValueAtTime(.0001, at + duration);
+  oscillator.connect(gain).connect(destination ?? ctx.destination); oscillator.start(at); oscillator.stop(at + duration + .03);
+}
+function noise(at: number, duration: number, volume: number, destination?: AudioNode) {
+  const ctx = audio(); const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate); const values = buffer.getChannelData(0);
+  for (let i = 0; i < values.length; i += 1) values[i] = (Math.random() * 2 - 1) * (1 - i / values.length);
+  const source = ctx.createBufferSource(); const filter = ctx.createBiquadFilter(); const gain = ctx.createGain();
+  filter.type = 'bandpass'; filter.frequency.value = 760; filter.Q.value = 1.2; gain.gain.setValueAtTime(volume, at); gain.gain.exponentialRampToValueAtTime(.0001, at + duration);
+  source.buffer = buffer; source.connect(filter).connect(gain).connect(destination ?? ctx.destination); source.start(at); source.stop(at + duration);
+}
+function playDoorSelect() { if (!settings.sound) return; const now = audio().currentTime; tone(260, now, .08, .035, 'triangle', undefined, 320); }
+function playCorrect() { if (!settings.sound) return; const now = audio().currentTime; tone(660, now, .22, .055, 'sine'); tone(880, now + .09, .32, .05, 'sine'); tone(1320, now + .19, .38, .035, 'sine'); }
+function playDamage() { if (!settings.sound) return; const now = audio().currentTime; tone(150, now, .34, .09, 'triangle', undefined, 65); tone(94, now + .06, .45, .075, 'sawtooth', undefined, 42); noise(now + .08, .36, .035); navigator.vibrate?.([45, 35, 85]); }
+function playBiomeTransition() { if (!settings.sound) return; const now = audio().currentTime; [392, 494, 587].forEach((note, i) => tone(note, now + i * .12, .42, .035, 'sine')); }
+function stopMusic() { musicPlaying = false; if (musicTimer) window.clearTimeout(musicTimer); musicTimer = undefined; if (musicGain && audioContext) musicGain.gain.setTargetAtTime(.0001, audioContext.currentTime, .12); }
+function scheduleMusic() {
+  if (!musicPlaying || !musicGain) return;
+  const ctx = audio(); const now = ctx.currentTime + .04; const roots = [146.83, 174.61, 196, 130.81]; const root = roots[Math.floor(Math.random() * roots.length)];
+  [1, 1.2, 1.5].forEach((ratio) => tone(root * ratio, now, 4.6, .07, 'sine', musicGain));
+  [2, 4, 5, 7].forEach((step, i) => tone(root * [2, 2.4, 3, 2.4][i], now + step * .48, .55, .045, 'sine', musicGain));
+  musicTimer = window.setTimeout(scheduleMusic, 4300);
+}
+function startMusic() {
+  if (!settings.sound || musicPlaying) return;
+  const ctx = audio(); musicGain ??= ctx.createGain(); musicGain.connect(ctx.destination); musicGain.gain.cancelScheduledValues(ctx.currentTime); musicGain.gain.setTargetAtTime(.28, ctx.currentTime, .25); musicPlaying = true; scheduleMusic();
+}
+function playTreasureFanfare() {
+  stopMusic(); if (!settings.sound) return;
+  const now = audio().currentTime + .04; [392, 494, 587, 784].forEach((note, i) => tone(note, now + i * .22, .75, .07, 'triangle'));
+  [523.25, 659.25, 783.99].forEach((note) => tone(note, now + 1.05, 1.7, .05, 'sine'));
+  [1046.5, 1318.51].forEach((note, i) => tone(note, now + 1.35 + i * .16, 1.1, .045, 'sine'));
+}
+function damageFlash() { document.body.classList.add('damage-flash'); window.setTimeout(() => document.body.classList.remove('damage-flash'), 520); }
 function shuffler(question: Question) { return question.options.map((text, i) => ({ text, letter: String.fromCharCode(65 + i) })).sort(() => Math.random() - .5); }
 
 function render() {
@@ -67,14 +113,14 @@ const victory = () => `<section class="panel victory"><img class="chest" src="/a
 const gameover = () => `<section class="panel"><p class="eyebrow">The dungeon prevailed</p><h2>Your five lives are gone.</h2><p>Every new run summons a new set of questions.</p><button class="primary" data-play-again>Try again</button><button data-go="roles">Choose another role</button></section>`;
 
 function bind(layer: Element) {
-  layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; render(); if (view === 'leaderboard') showScores(0); });
+  layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; if (view === 'prologue') startMusic(); if (view === 'title' || view === 'leaderboard' || view === 'settings') stopMusic(); render(); if (view === 'leaderboard') showScores(0); });
   layer.querySelectorAll<HTMLElement>('[data-role]').forEach((button) => button.onclick = () => start(button.dataset.role as Role));
   layer.querySelectorAll<HTMLElement>('[data-option]').forEach((button) => button.onclick = () => choose(Number(button.dataset.option)));
-  layer.querySelector<HTMLElement>('[data-pause]')?.addEventListener('click', () => { document.body.dataset.paused = 'true'; stopTimer(); render(); });
-  layer.querySelector<HTMLElement>('[data-resume]')?.addEventListener('click', () => { document.body.dataset.paused = 'false'; beginTimer(false); render(); });
+  layer.querySelector<HTMLElement>('[data-pause]')?.addEventListener('click', () => { document.body.dataset.paused = 'true'; stopTimer(); stopMusic(); render(); });
+  layer.querySelector<HTMLElement>('[data-resume]')?.addEventListener('click', () => { document.body.dataset.paused = 'false'; startMusic(); beginTimer(false); render(); });
   layer.querySelector<HTMLElement>('[data-restart]')?.addEventListener('click', () => { if (confirm('Restart and lose this run?')) start(chosenRole); });
-  layer.querySelector<HTMLElement>('[data-return-menu]')?.addEventListener('click', () => { stopTimer(); document.body.dataset.paused = 'false'; view = 'title'; render(); });
-  layer.querySelectorAll<HTMLInputElement>('[data-setting]').forEach((input) => input.onchange = () => { settings[input.dataset.setting!] = input.checked; saveSettings(); render(); });
+  layer.querySelector<HTMLElement>('[data-return-menu]')?.addEventListener('click', () => { stopTimer(); stopMusic(); document.body.dataset.paused = 'false'; view = 'title'; render(); });
+  layer.querySelectorAll<HTMLInputElement>('[data-setting]').forEach((input) => input.onchange = () => { settings[input.dataset.setting!] = input.checked; if (input.dataset.setting === 'sound' && !input.checked) stopMusic(); saveSettings(); render(); });
   layer.querySelector<HTMLElement>('[data-settings]')?.addEventListener('click', () => { view = 'settings'; render(); });
   layer.querySelector<HTMLElement>('[data-admin]')?.addEventListener('click', () => { adminError = ''; view = isAdminSignedIn() ? 'admin' : 'adminLogin'; render(); });
   layer.querySelector<HTMLFormElement>('[data-login-form]')?.addEventListener('submit', async (event) => {
@@ -94,10 +140,10 @@ function bind(layer: Element) {
   layer.querySelector<HTMLElement>('[data-save-score]')?.addEventListener('click', () => { const name = (layer.querySelector<HTMLInputElement>('[data-name]')?.value ?? '').trim(); if (!name) return; if (!cloudOnline) { alert('You are offline. Reconnect before submitting a shared score.'); return; } void submitScore(chosenRole, name, score).then(() => { view = 'leaderboard'; render(); void showScores(roleList.indexOf(chosenRole)); }).catch((error) => alert(error instanceof Error ? error.message : 'Could not submit this score.')); });
 }
 async function showScores(index: number) { const list = document.querySelector('#score-list'); if (!list) return; const role = roleList[index]; list.innerHTML = '<li>Loading champions…</li>'; document.querySelectorAll('.tabs button').forEach((button, i) => button.classList.toggle('active', i === index)); try { const entries = await fetchScores(role); cloudOnline = true; list.innerHTML = entries.length ? entries.map((entry, i) => `<li><span>${i + 1}. ${entry.name}</span><b>${entry.score}</b></li>`).join('') : '<li>No champion has claimed this path yet.</li>'; } catch { cloudOnline = false; list.innerHTML = '<li>Leaderboard temporarily unavailable. Please try again when you are online.</li>'; } }
-function start(role: Role) { chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; render(); beginTimer(); }
+function start(role: Role) { chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; startMusic(); render(); beginTimer(); }
 function beginTimer(reset = true) { stopTimer(); if (reset) { graceLeft = 10; timeLeft = 10; } timer = window.setInterval(() => { if (graceLeft > 0) graceLeft = Math.max(0, graceLeft - .1); else timeLeft = Math.max(0, timeLeft - .1); const target = document.querySelector('.hud b'); if (target) target.textContent = graceLeft > 0 ? `⌛ Bonus begins in ${graceLeft.toFixed(1)}s` : timeLeft > 0 ? `⌛ Bonus ${timeLeft.toFixed(1)}s` : '⌛ Score locked'; }, 100); }
-function choose(optionIndex: number) { if (resolving) return; if (expanded !== optionIndex) { expanded = optionIndex; render(); return; } const option = displayedOptions[optionIndex]; answer(option.letter === run[index].answer); }
-function answer(correct: boolean) { stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; beep(correct); if (correct) score += graceLeft > 0 ? 100 : Math.max(0, Math.ceil(timeLeft * 10)); else lives -= 1; expanded = -1; render(); window.setTimeout(() => { reaction = 'idle'; resolving = false; if (!correct && lives <= 0) { view = 'gameover'; render(); return; } index += 1; if (index >= 50) { view = 'victory'; render(); return; } displayedOptions = shuffler(run[index]); render(); beginTimer(); }, settings.reduced ? 0 : 650); }
+function choose(optionIndex: number) { if (resolving) return; if (expanded !== optionIndex) { playDoorSelect(); expanded = optionIndex; render(); return; } const option = displayedOptions[optionIndex]; answer(option.letter === run[index].answer); }
+function answer(correct: boolean) { stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; if (correct) playCorrect(); else { playDamage(); damageFlash(); } if (correct) score += graceLeft > 0 ? 100 : Math.max(0, Math.ceil(timeLeft * 10)); else lives -= 1; expanded = -1; render(); window.setTimeout(() => { reaction = 'idle'; resolving = false; if (!correct && lives <= 0) { stopMusic(); view = 'gameover'; render(); return; } index += 1; if (index >= 50) { view = 'victory'; playTreasureFanfare(); render(); return; } if (index % 10 === 0) playBiomeTransition(); displayedOptions = shuffler(run[index]); render(); beginTimer(); }, settings.reduced ? 0 : 650); }
 
 async function bootstrap() { const response = await fetch('/question-bank.xlsx'); defaultBank = parseWorkbook(await response.arrayBuffer()); try { const active = await fetchActiveBank(); bank = active ?? defaultBank; cloudOnline = Boolean(active); } catch { bank = defaultBank; cloudOnline = false; } render(); }
 bootstrap().catch((error) => { app.innerHTML = `<pre>Unable to load question bank: ${error instanceof Error ? error.message : String(error)}</pre>`; });
