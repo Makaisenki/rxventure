@@ -126,7 +126,11 @@ function render() {
 const title = () => `<section class="hero"><p class="eyebrow">A pharmacy quest for knowledge</p><h1>RxVenture <span>Dungeon</span></h1><p class="lede">Seek the sacred treasure. Choose wisely. Make your pharmacy legendary.</p>${cloudOnline ? '' : '<p class="cloud-status">Offline mode: shared scores are unavailable.</p>'}<button class="primary" data-go="prologue">Start quest</button><nav><button data-go="leaderboard">Leaderboard</button><button data-settings>Settings</button></nav><button class="crest" aria-label="Administration" data-admin>✦</button></section>`;
 const prologue = () => `<section class="panel story"><p class="eyebrow">The call to adventure</p><h2>The kingdom needs your knowledge.</h2><p>Deep in the enchanted dungeon rests a treasure that will make your pharmacy the most prestigious in the realm.</p><p>Answer swiftly. Choose the right doors. Protect your five lives.</p><button class="primary" data-go="roles">Choose your role</button></section>`;
 const portraitAssets = ['role-pharmacist.png', 'role-technician.png', 'role-storekeeper.png', 'role-retail.png'];
-const roleLabel = (role: Role) => role === 'Pharmacy Technician/Executive/Assistant' ? 'PA / PT / PE' : role;
+const roleLabel = (role: Role) => role === 'Pharmacy Technician/Executive/Assistant'
+  ? 'PA / PT / PE'
+  : role === 'Storekeeper/Health Assistant'
+    ? 'SK / HA'
+    : role;
 const roles = () => `<section class="panel"><p class="eyebrow">Choose your calling</p><h2>Which adventurer are you?</h2><div class="role-grid">${roleList.map((role, i) => `<button class="role-card" data-role="${role}"><span class="portrait p${i}"><img src="/assets/${portraitAssets[i]}" alt=""/></span><strong>${roleLabel(role)}</strong><small>Enter the dungeon</small></button>`).join('')}</div><button data-go="title">Back</button></section>`;
 function game() {
   const question = run[index];
