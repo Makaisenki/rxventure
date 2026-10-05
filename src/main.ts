@@ -145,7 +145,6 @@ const victory = () => `<section class="panel victory"><img class="chest" src="/a
 const gameover = () => `<section class="panel"><p class="eyebrow">The dungeon prevailed</p><h2>Your five lives are gone.</h2><p>Return to your pharmacy and prepare yourself further.</p><button class="primary" data-play-again>Try again</button><button data-go="title">Return to main menu</button></section>`;
 
 function bind(layer: Element) {
-  if (view === 'title') layer.addEventListener('pointerdown', () => startMusic('menu'));
   layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; if (view === 'title' || view === 'leaderboard' || view === 'settings') stopMusic(); render(); if (view === 'leaderboard') showScores(0); });
   layer.querySelectorAll<HTMLElement>('[data-role]').forEach((button) => button.onclick = () => start(button.dataset.role as Role));
   layer.querySelectorAll<HTMLElement>('[data-option]').forEach((button) => button.onclick = () => choose(Number(button.dataset.option)));
