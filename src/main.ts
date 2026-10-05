@@ -65,7 +65,17 @@ function playDoorSelect() { if (!settings.sound) return; const now = audio().cur
 function playCorrect() { if (!settings.sound) return; const now = audio().currentTime; tone(660, now, .22, .055, 'sine'); tone(880, now + .09, .32, .05, 'sine'); tone(1320, now + .19, .38, .035, 'sine'); }
 function playDamage() { if (!settings.sound) return; const now = audio().currentTime; tone(150, now, .34, .09, 'triangle', undefined, 65); tone(94, now + .06, .45, .075, 'sawtooth', undefined, 42); noise(now + .08, .36, .035); navigator.vibrate?.([45, 35, 85]); }
 function playBiomeTransition() { if (!settings.sound) return; const now = audio().currentTime; [392, 494, 587].forEach((note, i) => tone(note, now + i * .12, .42, .035, 'sine')); }
-function stopMusic() { musicPlaying = false; if (musicTimer) window.clearTimeout(musicTimer); musicTimer = undefined; if (musicGain && audioContext) musicGain.gain.setTargetAtTime(.0001, audioContext.currentTime, .12); }
+function stopMusic() {
+  musicPlaying = false;
+  if (musicTimer) window.clearTimeout(musicTimer);
+  musicTimer = undefined;
+  const oldGain = musicGain;
+  musicGain = undefined;
+  if (oldGain && audioContext) {
+    oldGain.gain.setTargetAtTime(.0001, audioContext.currentTime, .08);
+    window.setTimeout(() => oldGain.disconnect(), 220);
+  }
+}
 function scheduleMusic() {
   if (!musicPlaying || !musicGain) return;
   const ctx = audio(); const now = ctx.currentTime + .04;
@@ -134,7 +144,7 @@ const gameover = () => `<section class="panel"><p class="eyebrow">The dungeon pr
 
 function bind(layer: Element) {
   if (view === 'title') layer.addEventListener('pointerdown', () => startMusic('menu'));
-  layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; if (view === 'prologue') startMusic('game'); if (view === 'title' || view === 'leaderboard' || view === 'settings') stopMusic(); render(); if (view === 'leaderboard') showScores(0); });
+  layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; if (view === 'title' || view === 'leaderboard' || view === 'settings') stopMusic(); render(); if (view === 'leaderboard') showScores(0); });
   layer.querySelectorAll<HTMLElement>('[data-role]').forEach((button) => button.onclick = () => start(button.dataset.role as Role));
   layer.querySelectorAll<HTMLElement>('[data-option]').forEach((button) => button.onclick = () => choose(Number(button.dataset.option)));
   layer.querySelector<HTMLElement>('[data-pause]')?.addEventListener('click', () => { document.body.dataset.paused = 'true'; stopTimer(); stopMusic(); render(); });
