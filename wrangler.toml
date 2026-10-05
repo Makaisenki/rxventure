@@ -4,3 +4,5 @@ compatibility_date = "2026-09-24"
 [vars]
 VITE_SUPABASE_URL = "https://hvmfekipwhvjhyqbboxc.supabase.co"
 SUPABASE_URL = "https://hvmfekipwhvjhyqbboxc.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2bWZla2lwd2h2amh5cWJib3hjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyNTE3NDEsImV4cCI6MjEwNTgyNzc0MX0.uCOt_gvJcUn-JnJA-mySkcaMyXagq5hcnAHrf3Qtuwk"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2bWZla2lwd2h2amh5cWJib3hjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyNTE3NDEsImV4cCI6MjEwNTgyNzc0MX0.uCOt_gvJcUn-JnJA-mySkcaMyXagq5hcnAHrf3Qtuwk"
