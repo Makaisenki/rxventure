@@ -9,6 +9,10 @@ test('starts a role-specific dungeon run', async ({ page }) => {
   await page.getByRole('button', { name: 'Pharmacist' }).click();
   await expect(page.locator('.question-scroll')).toBeVisible();
   await expect(page.locator('.door')).toHaveCount(4);
+  const columnCount = await page.locator('.doors').evaluate((doors) =>
+    getComputedStyle(doors).gridTemplateColumns.trim().split(/\s+/).length,
+  );
+  expect(columnCount).toBe(4);
   await page.locator('.door').first().click();
   await expect(page.locator('.door.expanded')).toHaveCount(1);
   await page.screenshot({ path: '.logs/qa-gameplay.png', fullPage: true });
