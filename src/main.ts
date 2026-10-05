@@ -11,7 +11,7 @@ let defaultBank: Bank;
 let view: View = 'title';
 let chosenRole: Role;
 let run: Question[] = [];
-let index = 0, score = 0, lives = 5, timeLeft = 10, graceLeft = 10, timer: number | undefined;
+let index = 0, score = 0, lives = 5, timeLeft = 10, graceLeft = 6, timer: number | undefined;
 let expanded = -1;
 let resolving = false;
 let reaction: 'idle' | 'correct' | 'wrong' = 'idle';
@@ -179,7 +179,7 @@ function bind(layer: Element) {
 }
 async function showScores(index: number) { const list = document.querySelector('#score-list'); if (!list) return; const role = roleList[index]; list.innerHTML = '<li>Loading champions…</li>'; document.querySelectorAll('.tabs button').forEach((button, i) => button.classList.toggle('active', i === index)); try { const entries = await fetchScores(role); cloudOnline = true; list.innerHTML = entries.length ? entries.map((entry, i) => `<li><span>${i + 1}. ${entry.name}</span><b>${entry.score}</b></li>`).join('') : '<li>No champion has claimed this path yet.</li>'; } catch { cloudOnline = false; list.innerHTML = '<li>Leaderboard temporarily unavailable. Please try again when you are online.</li>'; } }
 function start(role: Role) { chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; stopMusic(); startMusic('game'); render(); beginTimer(); }
-function beginTimer(reset = true) { stopTimer(); if (reset) { graceLeft = 10; timeLeft = 10; } timer = window.setInterval(() => { if (graceLeft > 0) graceLeft = Math.max(0, graceLeft - .1); else timeLeft = Math.max(0, timeLeft - .1); const target = document.querySelector('.hud b'); if (target) target.textContent = graceLeft > 0 ? `⌛ Bonus begins in ${graceLeft.toFixed(1)}s` : timeLeft > 0 ? `⌛ Bonus ${timeLeft.toFixed(1)}s` : '⌛ Score locked'; }, 100); }
+function beginTimer(reset = true) { stopTimer(); if (reset) { graceLeft = 6; timeLeft = 10; } timer = window.setInterval(() => { if (graceLeft > 0) graceLeft = Math.max(0, graceLeft - .1); else timeLeft = Math.max(0, timeLeft - .1); const target = document.querySelector('.hud b'); if (target) target.textContent = graceLeft > 0 ? `⌛ Bonus begins in ${graceLeft.toFixed(1)}s` : timeLeft > 0 ? `⌛ Bonus ${timeLeft.toFixed(1)}s` : '⌛ Score locked'; }, 100); }
 function choose(optionIndex: number) { if (resolving) return; if (expanded !== optionIndex) { playDoorSelect(); expanded = optionIndex; render(); return; } const option = displayedOptions[optionIndex]; answer(option.letter === run[index].answer); }
 function answer(correct: boolean) { stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; if (correct) playCorrect(); else { playDamage(); damageFlash(); } if (correct) score += graceLeft > 0 ? 100 : Math.max(0, Math.ceil(timeLeft * 10)); else lives -= 1; expanded = -1; render(); window.setTimeout(() => { reaction = 'idle'; resolving = false; if (!correct && lives <= 0) { playGameOver(); stopMusic(); view = 'gameover'; render(); return; } index += 1; if (index >= 50) { view = 'victory'; playTreasureFanfare(); render(); return; } if (index % 10 === 0) playBiomeTransition(); displayedOptions = shuffler(run[index]); render(); beginTimer(); }, settings.reduced ? 0 : 650); }
 

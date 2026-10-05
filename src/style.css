@@ -54,3 +54,5 @@ body.damage-flash::after{content:'';position:fixed;z-index:50;inset:0;pointer-ev
 body.admin-page{background:#4a1028}body.admin-page .ui-layer{background:linear-gradient(145deg,#3c0b20,#701f3d 52%,#2a0818)}
 .admin-upload{width:min(560px,92vw);margin:18px 0 10px;padding:18px 22px;border:2px solid #e9c66c;border-radius:14px;background:#250b1bcc;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 0 0 4px #e9c66c22}.admin-upload label{color:#f7e8b8;font-weight:700}.admin-upload input{margin:0;max-width:100%}
 .primary{color:#fff;text-shadow:0 1px 3px #3c2800}
+.lives .heart{font-size:1.5rem}
+.player-portrait{width:clamp(100px,12vw,165px);height:clamp(140px,22vh,230px)}
