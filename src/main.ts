@@ -40,6 +40,7 @@ let audioContext: AudioContext | undefined;
 let musicGain: GainNode | undefined;
 let musicTimer: number | undefined;
 let musicPlaying = false;
+let musicMode: 'menu' | 'game' = 'game';
 
 function audio() {
   audioContext ??= new AudioContext();
@@ -67,13 +68,24 @@ function playBiomeTransition() { if (!settings.sound) return; const now = audio(
 function stopMusic() { musicPlaying = false; if (musicTimer) window.clearTimeout(musicTimer); musicTimer = undefined; if (musicGain && audioContext) musicGain.gain.setTargetAtTime(.0001, audioContext.currentTime, .12); }
 function scheduleMusic() {
   if (!musicPlaying || !musicGain) return;
-  const ctx = audio(); const now = ctx.currentTime + .04; const roots = [146.83, 174.61, 196, 130.81]; const root = roots[Math.floor(Math.random() * roots.length)];
-  [1, 1.2, 1.5].forEach((ratio) => tone(root * ratio, now, 4.6, .07, 'sine', musicGain));
-  [2, 4, 5, 7].forEach((step, i) => tone(root * [2, 2.4, 3, 2.4][i], now + step * .48, .55, .045, 'sine', musicGain));
-  musicTimer = window.setTimeout(scheduleMusic, 4300);
+  const ctx = audio(); const now = ctx.currentTime + .04;
+  if (musicMode === 'menu') {
+    const roots = [196, 220, 246.94, 293.66]; const root = roots[Math.floor(Math.random() * roots.length)];
+    [1, 1.25, 1.5, 2].forEach((ratio) => tone(root * ratio, now, 3.8, .075, 'triangle', musicGain));
+    [2, 2.5, 3, 4, 3].forEach((ratio, i) => tone(root * ratio, now + i * .36, .42, .06, 'sine', musicGain));
+    musicTimer = window.setTimeout(scheduleMusic, 3600);
+  } else {
+    const roots = [146.83, 174.61, 196, 130.81]; const root = roots[Math.floor(Math.random() * roots.length)];
+    [1, 1.2, 1.5].forEach((ratio) => tone(root * ratio, now, 4.6, .07, 'sine', musicGain));
+    [2, 4, 5, 7].forEach((step, i) => tone(root * [2, 2.4, 3, 2.4][i], now + step * .48, .55, .045, 'sine', musicGain));
+    musicTimer = window.setTimeout(scheduleMusic, 4300);
+  }
 }
-function startMusic() {
-  if (!settings.sound || musicPlaying) return;
+function startMusic(mode: 'menu' | 'game' = 'game') {
+  if (!settings.sound) return;
+  if (musicPlaying && musicMode === mode) return;
+  if (musicPlaying) stopMusic();
+  musicMode = mode;
   const ctx = audio(); musicGain ??= ctx.createGain(); musicGain.connect(ctx.destination); musicGain.gain.cancelScheduledValues(ctx.currentTime); musicGain.gain.setTargetAtTime(.36, ctx.currentTime, .25); musicPlaying = true; scheduleMusic();
 }
 function playTreasureFanfare() {
@@ -121,12 +133,12 @@ const victory = () => `<section class="panel victory"><img class="chest" src="/a
 const gameover = () => `<section class="panel"><p class="eyebrow">The dungeon prevailed</p><h2>Your five lives are gone.</h2><p>Return to your pharmacy and prepare yourself further.</p><button class="primary" data-play-again>Try again</button><button data-go="title">Return to main menu</button></section>`;
 
 function bind(layer: Element) {
-  if (view === 'title') layer.addEventListener('pointerdown', () => startMusic(), { once: true });
-  layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; if (view === 'prologue') startMusic(); if (view === 'title' || view === 'leaderboard' || view === 'settings') stopMusic(); render(); if (view === 'leaderboard') showScores(0); });
+  if (view === 'title') layer.addEventListener('pointerdown', () => startMusic('menu'));
+  layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; if (view === 'prologue') startMusic('game'); if (view === 'title' || view === 'leaderboard' || view === 'settings') stopMusic(); render(); if (view === 'leaderboard') showScores(0); });
   layer.querySelectorAll<HTMLElement>('[data-role]').forEach((button) => button.onclick = () => start(button.dataset.role as Role));
   layer.querySelectorAll<HTMLElement>('[data-option]').forEach((button) => button.onclick = () => choose(Number(button.dataset.option)));
   layer.querySelector<HTMLElement>('[data-pause]')?.addEventListener('click', () => { document.body.dataset.paused = 'true'; stopTimer(); stopMusic(); render(); });
-  layer.querySelector<HTMLElement>('[data-resume]')?.addEventListener('click', () => { document.body.dataset.paused = 'false'; startMusic(); beginTimer(false); render(); });
+  layer.querySelector<HTMLElement>('[data-resume]')?.addEventListener('click', () => { document.body.dataset.paused = 'false'; startMusic('game'); beginTimer(false); render(); });
   layer.querySelector<HTMLElement>('[data-restart]')?.addEventListener('click', () => { if (confirm('Restart and lose this run?')) start(chosenRole); });
   layer.querySelector<HTMLElement>('[data-return-menu]')?.addEventListener('click', () => { stopTimer(); stopMusic(); document.body.dataset.paused = 'false'; view = 'title'; render(); });
   layer.querySelectorAll<HTMLInputElement>('[data-setting]').forEach((input) => input.onchange = () => { settings[input.dataset.setting!] = input.checked; if (input.dataset.setting === 'sound' && !input.checked) stopMusic(); saveSettings(); render(); });
@@ -149,7 +161,7 @@ function bind(layer: Element) {
   layer.querySelector<HTMLElement>('[data-save-score]')?.addEventListener('click', () => { const name = (layer.querySelector<HTMLInputElement>('[data-name]')?.value ?? '').trim(); if (!name) return; if (!cloudOnline) { alert('You are offline. Reconnect before submitting a shared score.'); return; } void submitScore(chosenRole, name, score).then(() => { view = 'leaderboard'; render(); void showScores(roleList.indexOf(chosenRole)); }).catch((error) => alert(error instanceof Error ? error.message : 'Could not submit this score.')); });
 }
 async function showScores(index: number) { const list = document.querySelector('#score-list'); if (!list) return; const role = roleList[index]; list.innerHTML = '<li>Loading champions…</li>'; document.querySelectorAll('.tabs button').forEach((button, i) => button.classList.toggle('active', i === index)); try { const entries = await fetchScores(role); cloudOnline = true; list.innerHTML = entries.length ? entries.map((entry, i) => `<li><span>${i + 1}. ${entry.name}</span><b>${entry.score}</b></li>`).join('') : '<li>No champion has claimed this path yet.</li>'; } catch { cloudOnline = false; list.innerHTML = '<li>Leaderboard temporarily unavailable. Please try again when you are online.</li>'; } }
-function start(role: Role) { chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; startMusic(); render(); beginTimer(); }
+function start(role: Role) { chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; startMusic('game'); render(); beginTimer(); }
 function beginTimer(reset = true) { stopTimer(); if (reset) { graceLeft = 10; timeLeft = 10; } timer = window.setInterval(() => { if (graceLeft > 0) graceLeft = Math.max(0, graceLeft - .1); else timeLeft = Math.max(0, timeLeft - .1); const target = document.querySelector('.hud b'); if (target) target.textContent = graceLeft > 0 ? `⌛ Bonus begins in ${graceLeft.toFixed(1)}s` : timeLeft > 0 ? `⌛ Bonus ${timeLeft.toFixed(1)}s` : '⌛ Score locked'; }, 100); }
 function choose(optionIndex: number) { if (resolving) return; if (expanded !== optionIndex) { playDoorSelect(); expanded = optionIndex; render(); return; } const option = displayedOptions[optionIndex]; answer(option.letter === run[index].answer); }
 function answer(correct: boolean) { stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; if (correct) playCorrect(); else { playDamage(); damageFlash(); } if (correct) score += graceLeft > 0 ? 100 : Math.max(0, Math.ceil(timeLeft * 10)); else lives -= 1; expanded = -1; render(); window.setTimeout(() => { reaction = 'idle'; resolving = false; if (!correct && lives <= 0) { playGameOver(); stopMusic(); view = 'gameover'; render(); return; } index += 1; if (index >= 50) { view = 'victory'; playTreasureFanfare(); render(); return; } if (index % 10 === 0) playBiomeTransition(); displayedOptions = shuffler(run[index]); render(); beginTimer(); }, settings.reduced ? 0 : 650); }
