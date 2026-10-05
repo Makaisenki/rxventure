@@ -5,6 +5,16 @@ export type Question = { id: string; category: string; prompt: string; options: 
 export type Bank = { roles: Record<Role, string[]>; questions: Question[] };
 
 const roles = ['Pharmacist', 'Pharmacy Technician/Executive/Assistant', 'Storekeeper/Health Assistant', 'Retail Staff'] as const;
+// Workbook authors may use the shorter label shown on the character-selection
+// screen. Keep the canonical role key internally so existing saved banks and
+// gameplay code remain compatible with older workbooks.
+const roleHeaderAliases: Record<Role, string[]> = {
+  Pharmacist: ['Pharmacist'],
+  'Pharmacy Technician/Executive/Assistant': ['Pharmacy Technician/Executive/Assistant', 'PA / PT / PE'],
+  'Storekeeper/Health Assistant': ['Storekeeper/Health Assistant', 'SK / HA'],
+  'Retail Staff': ['Retail Staff'],
+};
+const normalizeHeader = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
 const aliases: Record<string, string> = {
   'code grey': 'code grey / blue', 'code blue': 'code grey / blue',
   'returning controlled drug (cd)': 'returning controlled drugs',
@@ -35,7 +45,8 @@ export function parseWorkbook(data: ArrayBuffer): Bank {
   const requirements = rows[2] ?? [];
   const mappedRoles = {} as Record<Role, string[]>;
   for (const role of roles) {
-    const column = header.findIndex((cell) => String(cell).trim() === role);
+    const acceptedHeaders = roleHeaderAliases[role].map(normalizeHeader);
+    const column = header.findIndex((cell) => acceptedHeaders.includes(normalizeHeader(String(cell))));
     if (column < 0) throw new Error(`Missing role column: ${role}`);
     mappedRoles[role] = String(requirements[column] ?? '').split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
   }
