@@ -126,6 +126,7 @@ function render() {
 const title = () => `<section class="hero"><p class="eyebrow">A pharmacy quest for knowledge</p><h1>RxVenture <span>Dungeon</span></h1><p class="lede">Seek the sacred treasure. Choose wisely. Make your pharmacy legendary.</p>${cloudOnline ? '' : '<p class="cloud-status">Offline mode: shared scores are unavailable.</p>'}<button class="primary" data-go="prologue">Start quest</button><nav><button data-go="leaderboard">Leaderboard</button><button data-settings>Settings</button></nav><button class="crest" aria-label="Administration" data-admin>✦</button></section>`;
 const prologue = () => `<section class="panel story"><p class="eyebrow">The call to adventure</p><h2>The kingdom needs your knowledge.</h2><p>Deep in the enchanted dungeon rests a treasure that will make your pharmacy the most prestigious in the realm.</p><p>Answer swiftly. Choose the right doors. Protect your five lives.</p><button class="primary" data-go="roles">Choose your role</button></section>`;
 const portraitAssets = ['role-pharmacist.png', 'role-technician.png', 'role-storekeeper.png', 'role-retail.png'];
+const injuredPortraitAssets = ['role-pharmacist-injured.png', 'role-technician-injured.png', 'role-storekeeper-injured.png', 'role-retail-injured.png'];
 const roleLabel = (role: Role) => role === 'Pharmacy Technician/Executive/Assistant'
   ? 'PA / PT / PE'
   : role === 'Storekeeper/Health Assistant'
@@ -136,7 +137,8 @@ function game() {
   const question = run[index];
   const floor = Math.floor(index / 10) + 1;
   const timerText = graceLeft > 0 ? `⌛ Bonus begins in ${graceLeft.toFixed(1)}s` : timeLeft > 0 ? `⌛ Bonus ${timeLeft.toFixed(1)}s` : '⌛ Score locked';
-  const avatar = portraitAssets[roleList.indexOf(chosenRole)];
+  const avatarIndex = roleList.indexOf(chosenRole);
+  const avatar = reaction === 'wrong' ? injuredPortraitAssets[avatarIndex] : portraitAssets[avatarIndex];
   const doorAsset = ['magic-door.png', 'door-crystal.png', 'door-castle.png', 'door-library.png', 'door-vault.png'][floor - 1];
   const hearts = Array.from({ length: 5 }, (_, i) => `<span class="heart ${i < lives ? 'heart-active' : 'heart-empty'}">♥</span>`).join('');
   return `<section class="game-ui biome-${floor}"><header class="hud"><span class="lives" aria-label="${lives} of 5 lives"><span class="heart-row" aria-hidden="true">${hearts}</span></span><b>${timerText}</b><span>${score} ✦ &nbsp; Floor ${floor} · ${index + 1}/50</span><button data-pause>Ⅱ</button></header><main class="question-wrap"><p class="category">${question.category}</p><div class="question-scroll">${question.prompt}</div></main><div class="doors">${displayedOptions.map((option, i) => `<button class="door ${expanded === i ? 'expanded' : ''}" data-option="${i}" ${resolving ? 'disabled' : ''}><img src="/assets/${doorAsset}" alt=""/><span class="plaque"><b>${option.letter}</b> ${option.text}</span></button>`).join('')}</div><aside class="player-portrait ${reaction}"><img src="/assets/${avatar}" alt="${roleLabel(chosenRole)} adventurer"/></aside><aside class="pause ${document.body.dataset.paused === 'true' ? 'show' : ''}"><h3>Pause quest</h3><button data-resume>Resume</button><button data-return-menu>Return to main menu</button></aside></section>`;
