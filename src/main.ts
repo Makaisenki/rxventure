@@ -3,12 +3,12 @@ import './style.css';
 import { Bank, Question, Role, parseWorkbook, roleList, selectRun } from './questionBank';
 import { clearLeaderboards, fetchActiveBank, fetchScores, isAdminSignedIn, restoreBundledBank, signIn, signOut, submitScore, uploadBank } from './cloud';
 
-type View = 'title' | 'prologue' | 'roles' | 'game' | 'leaderboard' | 'settings' | 'adminLogin' | 'admin' | 'victory' | 'gameover';
+type View = 'disclaimer' | 'title' | 'prologue' | 'roles' | 'game' | 'leaderboard' | 'settings' | 'adminLogin' | 'admin' | 'victory' | 'gameover';
 const KEY = { settings: 'rxventure-settings' };
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let bank: Bank;
 let defaultBank: Bank;
-let view: View = 'title';
+let view: View = 'disclaimer';
 let chosenRole: Role;
 let run: Question[] = [];
 let index = 0, score = 0, lives = 5, timeLeft = 10, graceLeft = 6, timer: number | undefined;
@@ -136,11 +136,12 @@ function shuffler(question: Question) { return question.options.map((text, i) =>
 function render() {
   document.body.classList.toggle('contrast', settings.contrast); document.body.classList.toggle('large', settings.large); document.body.classList.toggle('admin-page', view === 'admin' || view === 'adminLogin'); document.body.classList.toggle('title-page', view === 'title');
   const layer = document.querySelector('.ui-layer') ?? document.createElement('section'); layer.className = 'ui-layer'; app.append(layer);
-  layer.innerHTML = view === 'title' ? title() : view === 'prologue' ? prologue() : view === 'roles' ? roles() : view === 'game' ? game() : view === 'leaderboard' ? leaderboard() : view === 'settings' ? settingsView() : view === 'adminLogin' ? adminLogin() : view === 'admin' ? admin() : view === 'victory' ? victory() : gameover();
+  layer.innerHTML = view === 'disclaimer' ? disclaimer() : view === 'title' ? title() : view === 'prologue' ? prologue() : view === 'roles' ? roles() : view === 'game' ? game() : view === 'leaderboard' ? leaderboard() : view === 'settings' ? settingsView() : view === 'adminLogin' ? adminLogin() : view === 'admin' ? admin() : view === 'victory' ? victory() : gameover();
   bind(layer);
   syncMusicForView();
 }
 
+const disclaimer = () => `<section class="panel disclaimer"><p class="eyebrow">Before you begin</p><h2>Disclaimer</h2><p>This game is for educational purposes only.</p><button class="primary" data-go="title">Continue</button></section>`;
 const title = () => `<section class="hero"><p class="eyebrow">A pharmacy quest for knowledge</p><h1>RxVenture <span>Dungeon</span></h1><p class="lede">Seek the sacred treasure. Choose wisely. Make your pharmacy legendary.</p>${cloudOnline ? '' : '<p class="cloud-status">Offline mode: shared scores are unavailable.</p>'}<button class="primary" data-go="prologue">Start quest</button><nav><button data-go="leaderboard">Leaderboard</button><button data-settings>Settings</button></nav><button class="crest" aria-label="Administration" data-admin>✦</button></section>`;
 const prologue = () => `<section class="panel story"><p class="eyebrow">The call to adventure</p><h2>The kingdom needs your knowledge.</h2><p>Deep in the enchanted dungeon rests a treasure that will make your pharmacy the most prestigious in the realm.</p><p>Answer swiftly. Choose the right doors. Protect your five lives.</p><button class="primary" data-go="roles">Choose your role</button></section>`;
 const portraitAssets = ['role-pharmacist.png', 'role-technician.png', 'role-storekeeper.png', 'role-retail.png'];
