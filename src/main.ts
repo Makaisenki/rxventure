@@ -118,7 +118,7 @@ function damageFlash() { document.body.classList.add('damage-flash'); window.set
 function shuffler(question: Question) { return question.options.map((text, i) => ({ text, letter: String.fromCharCode(65 + i) })).sort(() => Math.random() - .5); }
 
 function render() {
-  document.body.classList.toggle('contrast', settings.contrast); document.body.classList.toggle('large', settings.large); document.body.classList.toggle('admin-page', view === 'admin' || view === 'adminLogin');
+  document.body.classList.toggle('contrast', settings.contrast); document.body.classList.toggle('large', settings.large); document.body.classList.toggle('admin-page', view === 'admin' || view === 'adminLogin'); document.body.classList.toggle('title-page', view === 'title');
   const layer = document.querySelector('.ui-layer') ?? document.createElement('section'); layer.className = 'ui-layer'; app.append(layer);
   layer.innerHTML = view === 'title' ? title() : view === 'prologue' ? prologue() : view === 'roles' ? roles() : view === 'game' ? game() : view === 'leaderboard' ? leaderboard() : view === 'settings' ? settingsView() : view === 'adminLogin' ? adminLogin() : view === 'admin' ? admin() : view === 'victory' ? victory() : gameover();
   bind(layer);
