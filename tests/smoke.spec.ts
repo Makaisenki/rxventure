@@ -8,9 +8,11 @@ test('starts a role-specific dungeon run', async ({ page }) => {
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
   await page.getByRole('button', { name: /Choose your role/i }).click();
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
+  await expect(page.locator('.ui-layer')).toHaveCSS('background-color', 'rgb(8, 27, 57)');
   await page.screenshot({ path: '.logs/qa-roles.png', fullPage: true });
   await page.getByRole('button', { name: 'Pharmacist' }).click();
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'ambience');
+  await expect(page.locator('.ui-layer')).toHaveCSS('background-color', 'rgb(8, 27, 57)');
   await expect(page.locator('.question-scroll')).toBeVisible();
   await expect(page.locator('.door')).toHaveCount(4);
   const columnCount = await page.locator('.doors').evaluate((doors) =>
@@ -27,6 +29,7 @@ test('opens title-screen accessibility settings', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.getByRole('heading', { name: 'Quest Settings' })).toBeVisible();
+  await expect(page.locator('.ui-layer')).toHaveCSS('background-color', 'rgb(8, 27, 57)');
   await page.getByLabel(/High contrast/i).check();
   await expect(page.locator('body')).toHaveClass(/contrast/);
 });
