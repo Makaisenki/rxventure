@@ -80,4 +80,17 @@ html,body{background:#081b39}
 .ui-layer{min-height:max(100%,100svh);background:#081b39}
 body.admin-page{background:#4a1028}
 body.admin-page .ui-layer{background:linear-gradient(145deg,#3c0b20,#701f3d 52%,#2a0818)}
+
+/* Keep the administrator's maroon surface continuous when its controls make
+   the page taller than the browser viewport. The panel no longer overlays the
+   lower content with the standard navy treatment. */
+body.admin-page .ui-layer{min-height:max(100%,100svh);background-attachment:scroll;background-size:100% 100%}
+body.admin-page .panel{min-height:max(100svh,100%);background:transparent}
+
+/* Phaser's decorative canvas must not contribute its own 900px block to the
+   document. Keeping it fixed behind the UI gives every view one scrollable
+   layer and prevents a canvas/background join from appearing below a panel. */
+#app{min-height:100svh;isolation:isolate}
+#app>canvas{position:fixed!important;inset:0!important;z-index:0!important;width:100vw!important;height:100svh!important;pointer-events:none}
+.ui-layer{position:relative;inset:auto;z-index:2;min-height:100svh}
 .leaderboard{background:radial-gradient(circle at 50% 48%,#5b3b1766,transparent 42%),linear-gradient(145deg,#120d2e,#2d1b13 55%,#0a2740);overflow:auto}.leaderboard-board{position:relative;width:min(1040px,96vw);min-height:min(760px,92vh);display:grid;place-items:center}.leaderboard-board-art{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;filter:drop-shadow(0 16px 30px #000b)}.leaderboard-content{position:relative;z-index:1;width:62%;max-width:650px;margin-top:2%;padding:28px 0 34px;text-align:center;color:#4a2b14}.leaderboard-content .eyebrow{color:#8a5a18;text-shadow:0 1px #f9e8ac}.leaderboard-content h2{margin:4px 0 18px;color:#6e4217;text-shadow:0 1px #fff1c2}.leaderboard-content .tabs{justify-content:center;flex-wrap:wrap;margin-bottom:18px}.leaderboard-content .tabs button{background:#6b421b;color:#ffe7a1;border:2px solid #bd872c;box-shadow:inset 0 1px #f8dc8c}.leaderboard-content .tabs button.active{background:#e4b94f;color:#3a210e;border-color:#fff0ae}.leaderboard-content ol{width:100%;min-height:150px;margin:0;padding:8px 12px;list-style-position:inside;text-align:left;background:#fff4d566;border:2px solid #b77a25;border-radius:10px;box-shadow:inset 0 0 18px #7c4d1c22}.leaderboard-content li{color:#4a2b14;border-bottom-color:#9e6a2d66}.leaderboard-content>button{background:#6b421b;border:2px solid #d4a33f;color:#ffe7a1;box-shadow:0 2px 8px #5a300855}.leaderboard-content>button:hover{background:#a87324}@media(max-width:720px){.leaderboard-board{min-height:700px;width:108vw}.leaderboard-content{width:60%;padding-top:20px}.leaderboard-content h2{font-size:2rem}.leaderboard-content .tabs{gap:2px}.leaderboard-content .tabs button{padding:6px 8px;font-size:.78rem}.leaderboard-content li{font-size:.82rem}}
