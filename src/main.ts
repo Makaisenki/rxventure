@@ -110,7 +110,7 @@ function startMusic(mode: 'menu' | 'ambience') {
   musicGain ??= ctx.createGain(); musicGain.connect(ctx.destination); musicGain.gain.cancelScheduledValues(ctx.currentTime); musicGain.gain.setTargetAtTime(.36, ctx.currentTime, .25); musicPlaying = true; scheduleMusic(musicSession);
 }
 function syncMusicForView() {
-  const menuMusicAllowed = view === 'title' || view === 'prologue' || view === 'roles';
+  const menuMusicAllowed = view === 'title' || view === 'prologue' || view === 'roles' || view === 'leaderboard' || view === 'settings';
   const ambienceAllowed = view === 'game' && document.body.dataset.paused !== 'true';
   document.body.dataset.musicScope = menuMusicAllowed ? 'menu' : ambienceAllowed ? 'ambience' : 'off';
   if (menuMusicAllowed) startMusic('menu');
