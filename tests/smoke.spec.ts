@@ -7,10 +7,10 @@ test('starts a role-specific dungeon run', async ({ page }) => {
   await page.getByRole('button', { name: /Start quest/i }).click();
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
   await page.getByRole('button', { name: /Choose your role/i }).click();
-  await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'off');
+  await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
   await page.screenshot({ path: '.logs/qa-roles.png', fullPage: true });
   await page.getByRole('button', { name: 'Pharmacist' }).click();
-  await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'off');
+  await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'ambience');
   await expect(page.locator('.question-scroll')).toBeVisible();
   await expect(page.locator('.door')).toHaveCount(4);
   const columnCount = await page.locator('.doors').evaluate((doors) =>
@@ -29,6 +29,24 @@ test('opens title-screen accessibility settings', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Quest Settings' })).toBeVisible();
   await page.getByLabel(/High contrast/i).check();
   await expect(page.locator('body')).toHaveClass(/contrast/);
+});
+
+test('keeps the navy title backdrop when the menu scrolls', async ({ page }) => {
+  await page.setViewportSize({ width: 915, height: 400 });
+  await page.goto('/');
+  await expect(page.locator('body')).toHaveClass(/title-page/);
+  const state = await page.evaluate(() => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    return {
+      scrollY: window.scrollY,
+      bodyBackground: getComputedStyle(document.body).backgroundColor,
+      layerBackground: getComputedStyle(document.querySelector('.ui-layer')!).backgroundColor,
+    };
+  });
+  expect(state.scrollY).toBeGreaterThan(0);
+  expect(state.bodyBackground).toBe('rgb(8, 27, 57)');
+  expect(state.layerBackground).toBe('rgb(8, 27, 57)');
+  await page.screenshot({ path: '.logs/qa-title-scroll-backdrop.png', fullPage: true });
 });
 
 test('opens administrator sign-in with one click', async ({ page }) => {
