@@ -40,7 +40,6 @@ let audioContext: AudioContext | undefined;
 let musicGain: GainNode | undefined;
 let musicTimer: number | undefined;
 let musicPlaying = false;
-let musicMode: 'menu' | 'game' = 'game';
 let musicSession = 0;
 
 function audio() {
@@ -81,24 +80,26 @@ function stopMusic() {
 function scheduleMusic(session = musicSession) {
   if (!musicPlaying || !musicGain || session !== musicSession) return;
   const ctx = audio(); const now = ctx.currentTime + .04;
-  if (musicMode === 'menu') {
-    const roots = [196, 220, 246.94, 293.66]; const root = roots[Math.floor(Math.random() * roots.length)];
-    [1, 1.25, 1.5, 2].forEach((ratio) => tone(root * ratio, now, 3.8, .075, 'triangle', musicGain));
-    [2, 2.5, 3, 4, 3].forEach((ratio, i) => tone(root * ratio, now + i * .36, .42, .06, 'sine', musicGain));
-    musicTimer = window.setTimeout(() => scheduleMusic(session), 3600);
-  } else {
-    const roots = [146.83, 174.61, 196, 130.81]; const root = roots[Math.floor(Math.random() * roots.length)];
-    [1, 1.2, 1.5].forEach((ratio) => tone(root * ratio, now, 4.6, .07, 'sine', musicGain));
-    [2, 4, 5, 7].forEach((step, i) => tone(root * [2, 2.4, 3, 2.4][i], now + step * .48, .55, .045, 'sine', musicGain));
-    musicTimer = window.setTimeout(() => scheduleMusic(session), 4300);
-  }
+  // A short, original fantasy motif: warm sustained harmony with a bright
+  // ascending call. It is deliberately scheduled only while the menu loop is live.
+  const roots = [196, 220, 246.94, 293.66]; const root = roots[Math.floor(Math.random() * roots.length)];
+  [1, 1.25, 1.5, 2].forEach((ratio) => tone(root * ratio, now, 3.8, .075, 'triangle', musicGain));
+  [2, 2.5, 3, 4, 3].forEach((ratio, i) => tone(root * ratio, now + i * .36, .42, .06, 'sine', musicGain));
+  musicTimer = window.setTimeout(() => scheduleMusic(session), 3600);
 }
-function startMusic(mode: 'menu' | 'game' = 'game') {
+function startMenuMusic() {
   if (!settings.sound) return;
-  if (musicPlaying && musicMode === mode) return;
-  if (musicPlaying) stopMusic();
-  musicMode = mode;
-  const ctx = audio(); musicGain ??= ctx.createGain(); musicGain.connect(ctx.destination); musicGain.gain.cancelScheduledValues(ctx.currentTime); musicGain.gain.setTargetAtTime(.36, ctx.currentTime, .25); musicPlaying = true; scheduleMusic(musicSession);
+  // Calling this again from the player's click resumes a browser-suspended
+  // context, while preserving the single scheduled menu loop.
+  const ctx = audio();
+  if (musicPlaying) return;
+  musicGain ??= ctx.createGain(); musicGain.connect(ctx.destination); musicGain.gain.cancelScheduledValues(ctx.currentTime); musicGain.gain.setTargetAtTime(.36, ctx.currentTime, .25); musicPlaying = true; scheduleMusic(musicSession);
+}
+function syncMusicForView() {
+  const menuMusicAllowed = view === 'title' || view === 'prologue';
+  document.body.dataset.musicScope = menuMusicAllowed ? 'menu' : 'off';
+  if (menuMusicAllowed) startMenuMusic();
+  else stopMusic();
 }
 function playTreasureFanfare() {
   stopMusic(); if (!settings.sound) return;
@@ -121,6 +122,7 @@ function render() {
   const layer = document.querySelector('.ui-layer') ?? document.createElement('section'); layer.className = 'ui-layer'; app.append(layer);
   layer.innerHTML = view === 'title' ? title() : view === 'prologue' ? prologue() : view === 'roles' ? roles() : view === 'game' ? game() : view === 'leaderboard' ? leaderboard() : view === 'settings' ? settingsView() : view === 'adminLogin' ? adminLogin() : view === 'admin' ? admin() : view === 'victory' ? victory() : gameover();
   bind(layer);
+  syncMusicForView();
 }
 
 const title = () => `<section class="hero"><p class="eyebrow">A pharmacy quest for knowledge</p><h1>RxVenture <span>Dungeon</span></h1><p class="lede">Seek the sacred treasure. Choose wisely. Make your pharmacy legendary.</p>${cloudOnline ? '' : '<p class="cloud-status">Offline mode: shared scores are unavailable.</p>'}<button class="primary" data-go="prologue">Start quest</button><nav><button data-go="leaderboard">Leaderboard</button><button data-settings>Settings</button></nav><button class="crest" aria-label="Administration" data-admin>✦</button></section>`;
@@ -151,11 +153,11 @@ const victory = () => `<section class="panel victory"><img class="chest" src="/a
 const gameover = () => `<section class="panel"><p class="eyebrow">The dungeon prevailed</p><h2>Your five lives are gone.</h2><p>Return to your pharmacy and prepare yourself further.</p><button class="primary" data-play-again>Try again</button><button data-go="title">Return to main menu</button></section>`;
 
 function bind(layer: Element) {
-  layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; if (view === 'title' || view === 'leaderboard' || view === 'settings') stopMusic(); render(); if (view === 'leaderboard') showScores(0); });
+  layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; render(); if (view === 'leaderboard') showScores(0); });
   layer.querySelectorAll<HTMLElement>('[data-role]').forEach((button) => button.onclick = () => start(button.dataset.role as Role));
   layer.querySelectorAll<HTMLElement>('[data-option]').forEach((button) => button.onclick = () => choose(Number(button.dataset.option)));
   layer.querySelector<HTMLElement>('[data-pause]')?.addEventListener('click', () => { document.body.dataset.paused = 'true'; stopTimer(); stopMusic(); render(); });
-  layer.querySelector<HTMLElement>('[data-resume]')?.addEventListener('click', () => { document.body.dataset.paused = 'false'; startMusic('game'); beginTimer(false); render(); });
+  layer.querySelector<HTMLElement>('[data-resume]')?.addEventListener('click', () => { document.body.dataset.paused = 'false'; beginTimer(false); render(); });
   layer.querySelector<HTMLElement>('[data-restart]')?.addEventListener('click', () => { if (confirm('Restart and lose this run?')) start(chosenRole); });
   layer.querySelector<HTMLElement>('[data-return-menu]')?.addEventListener('click', () => { stopTimer(); stopMusic(); document.body.dataset.paused = 'false'; view = 'title'; render(); });
   layer.querySelectorAll<HTMLInputElement>('[data-setting]').forEach((input) => input.onchange = () => { settings[input.dataset.setting!] = input.checked; if (input.dataset.setting === 'sound' && !input.checked) stopMusic(); saveSettings(); render(); });
@@ -178,7 +180,7 @@ function bind(layer: Element) {
   layer.querySelector<HTMLElement>('[data-save-score]')?.addEventListener('click', () => { const name = (layer.querySelector<HTMLInputElement>('[data-name]')?.value ?? '').trim(); if (!name) return; if (!cloudOnline) { alert('You are offline. Reconnect before submitting a shared score.'); return; } void submitScore(chosenRole, name, score).then(() => { view = 'leaderboard'; render(); void showScores(roleList.indexOf(chosenRole)); }).catch((error) => alert(error instanceof Error ? error.message : 'Could not submit this score.')); });
 }
 async function showScores(index: number) { const list = document.querySelector('#score-list'); if (!list) return; const role = roleList[index]; list.innerHTML = '<li>Loading champions…</li>'; document.querySelectorAll('.tabs button').forEach((button, i) => button.classList.toggle('active', i === index)); try { const entries = await fetchScores(role); cloudOnline = true; list.innerHTML = entries.length ? entries.map((entry, i) => `<li><span>${i + 1}. ${entry.name}</span><b>${entry.score}</b></li>`).join('') : '<li>No champion has claimed this path yet.</li>'; } catch { cloudOnline = false; list.innerHTML = '<li>Leaderboard temporarily unavailable. Please try again when you are online.</li>'; } }
-function start(role: Role) { chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; stopMusic(); startMusic('game'); render(); beginTimer(); }
+function start(role: Role) { chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; render(); beginTimer(); }
 function beginTimer(reset = true) { stopTimer(); if (reset) { graceLeft = 6; timeLeft = 10; } timer = window.setInterval(() => { if (graceLeft > 0) graceLeft = Math.max(0, graceLeft - .1); else timeLeft = Math.max(0, timeLeft - .1); const target = document.querySelector('.hud b'); if (target) target.textContent = graceLeft > 0 ? `⌛ Bonus begins in ${graceLeft.toFixed(1)}s` : timeLeft > 0 ? `⌛ Bonus ${timeLeft.toFixed(1)}s` : '⌛ Score locked'; }, 100); }
 function choose(optionIndex: number) { if (resolving) return; if (expanded !== optionIndex) { playDoorSelect(); expanded = optionIndex; render(); return; } const option = displayedOptions[optionIndex]; answer(option.letter === run[index].answer); }
 function answer(correct: boolean) { stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; if (correct) playCorrect(); else { playDamage(); damageFlash(); } if (correct) score += graceLeft > 0 ? 100 : Math.max(0, Math.ceil(timeLeft * 10)); else lives -= 1; expanded = -1; render(); window.setTimeout(() => { reaction = 'idle'; resolving = false; if (!correct && lives <= 0) { playGameOver(); stopMusic(); view = 'gameover'; render(); return; } index += 1; if (index >= 50) { view = 'victory'; playTreasureFanfare(); render(); return; } if (index % 10 === 0) playBiomeTransition(); displayedOptions = shuffler(run[index]); render(); beginTimer(); }, 650); }
