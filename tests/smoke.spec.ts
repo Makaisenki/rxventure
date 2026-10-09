@@ -103,6 +103,8 @@ test('administrator can preview and leave the high-score page', async ({ page })
   await page.getByRole('button', { name: 'Open high-score page' }).click();
   await expect(page.getByRole('heading', { name: 'You found the sacred treasure!' })).toBeVisible();
   await expect(page.getByLabel(/Enter your adventurer nickname/i)).toBeVisible();
+  await expect(page.locator('.victory')).toHaveCSS('background-image', /treasure-vault-background\.png/);
+  await page.screenshot({ path: '.logs/qa-victory-vault.png', fullPage: true });
   await page.getByRole('button', { name: /Return to administrator/i }).click();
   await expect(page.getByRole('heading', { name: 'Question bank' })).toBeVisible();
 });
