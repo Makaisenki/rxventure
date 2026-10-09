@@ -90,12 +90,12 @@ function scheduleMusic(session = musicSession) {
     [2, 2.5, 3, 4, 3].forEach((ratio, i) => tone(root * ratio, now + i * .36, .42, .06, 'sine', musicGain));
     musicTimer = window.setTimeout(() => scheduleMusic(session), 3600);
   } else if (musicMode === 'ambience') {
-    // Gameplay gets a quiet dungeon soundscape rather than the main-menu BGM.
-    const roots = [65.41, 73.42, 82.41]; const root = roots[Math.floor(Math.random() * roots.length)];
-    [1, 1.5, 2].forEach((ratio) => tone(root * ratio, now, 5.6, .028, 'sine', musicGain));
-    tone(root * 4, now + 2.1, .95, .012, 'triangle', musicGain);
-    noise(now + .3, 1.8, .006, musicGain);
-    musicTimer = window.setTimeout(() => scheduleMusic(session), 5200);
+    // Restore the original dungeon ambience soundtrack used before the
+    // menu-music update. This remains a separate loop from the menu motif.
+    const roots = [146.83, 174.61, 196, 130.81]; const root = roots[Math.floor(Math.random() * roots.length)];
+    [1, 1.2, 1.5].forEach((ratio) => tone(root * ratio, now, 4.6, .07, 'sine', musicGain));
+    [2, 4, 5, 7].forEach((step, i) => tone(root * [2, 2.4, 3, 2.4][i], now + step * .48, .55, .045, 'sine', musicGain));
+    musicTimer = window.setTimeout(() => scheduleMusic(session), 4300);
   }
 }
 function startMusic(mode: 'menu' | 'ambience') {
