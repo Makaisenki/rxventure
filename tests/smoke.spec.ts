@@ -16,6 +16,12 @@ test('starts a role-specific dungeon run', async ({ page }) => {
   await expect(page.locator('.ui-layer')).toHaveCSS('background-color', 'rgb(8, 27, 57)');
   await expect(page.locator('.question-scroll')).toBeVisible();
   await expect(page.locator('.door')).toHaveCount(4);
+  const layout = await page.evaluate(() => {
+    const question = document.querySelector('.question-wrap')!.getBoundingClientRect();
+    const firstDoor = document.querySelector('.door')!.getBoundingClientRect();
+    return { questionBottom: question.bottom, firstDoorTop: firstDoor.top };
+  });
+  expect(layout.firstDoorTop).toBeGreaterThan(layout.questionBottom + 48);
   const columnCount = await page.locator('.doors').evaluate((doors) =>
     getComputedStyle(doors).gridTemplateColumns.trim().split(/\s+/).length,
   );
