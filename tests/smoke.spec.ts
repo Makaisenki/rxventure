@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('starts a role-specific dungeon run', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: /RxVenture/i })).toBeVisible();
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
   await page.getByRole('button', { name: /Start quest/i }).click();
@@ -27,6 +28,7 @@ test('starts a role-specific dungeon run', async ({ page }) => {
 test('opens title-screen accessibility settings', async ({ page }) => {
   test.skip(test.info().project.name === 'mobile-chrome', 'The touch gameplay flow is already covered on the mobile profile.');
   await page.goto('/');
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.getByRole('heading', { name: 'Quest Settings' })).toBeVisible();
   await expect(page.locator('.ui-layer')).toHaveCSS('background-color', 'rgb(8, 27, 57)');
@@ -37,6 +39,7 @@ test('opens title-screen accessibility settings', async ({ page }) => {
 test('keeps the navy title backdrop when the menu scrolls', async ({ page }) => {
   await page.setViewportSize({ width: 915, height: 400 });
   await page.goto('/');
+  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.locator('body')).toHaveClass(/title-page/);
   const state = await page.evaluate(() => {
     window.scrollTo(0, document.documentElement.scrollHeight);
@@ -75,6 +78,7 @@ test('keeps the maroon administrator backdrop when content scrolls', async ({ pa
 
 test('opens administrator sign-in with one click', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Administration' }).click();
   await expect(page.getByRole('heading', { name: 'Administrator sign in' })).toBeVisible();
   await expect(page.getByLabel('Email')).toBeVisible();
@@ -83,6 +87,7 @@ test('opens administrator sign-in with one click', async ({ page }) => {
 
 test('administrator can preview and leave the high-score page', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.evaluate(() => sessionStorage.setItem('rxventure-admin-token', 'test-token'));
   await page.getByRole('button', { name: 'Administration' }).click();
   await expect(page.getByRole('heading', { name: 'Question bank' })).toBeVisible();
