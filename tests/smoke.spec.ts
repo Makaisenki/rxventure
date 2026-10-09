@@ -52,10 +52,43 @@ test('keeps the navy title backdrop when the menu scrolls', async ({ page }) => 
   await page.screenshot({ path: '.logs/qa-title-scroll-backdrop.png', fullPage: true });
 });
 
+test('keeps the maroon administrator backdrop when content scrolls', async ({ page }) => {
+  await page.setViewportSize({ width: 915, height: 400 });
+  await page.goto('/');
+  await page.locator('.ui-layer').waitFor();
+  const state = await page.evaluate(() => {
+    document.body.classList.add('admin-page');
+    const layer = document.querySelector<HTMLElement>('.ui-layer')!;
+    layer.innerHTML = '<section class="panel admin" style="min-height: 1100px">Administrator preview</section>';
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    return {
+      scrollY: window.scrollY,
+      panelBackground: getComputedStyle(layer.querySelector('.panel')!).backgroundColor,
+      layerBackground: getComputedStyle(layer).backgroundImage,
+    };
+  });
+  expect(state.scrollY).toBeGreaterThan(0);
+  expect(state.panelBackground).toBe('rgba(0, 0, 0, 0)');
+  expect(state.layerBackground).toContain('linear-gradient');
+  await page.screenshot({ path: '.logs/qa-admin-scroll-backdrop.png', fullPage: true });
+});
+
 test('opens administrator sign-in with one click', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Administration' }).click();
   await expect(page.getByRole('heading', { name: 'Administrator sign in' })).toBeVisible();
   await expect(page.getByLabel('Email')).toBeVisible();
   await expect(page.getByLabel('Password')).toBeVisible();
+});
+
+test('administrator can preview and leave the high-score page', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => sessionStorage.setItem('rxventure-admin-token', 'test-token'));
+  await page.getByRole('button', { name: 'Administration' }).click();
+  await expect(page.getByRole('heading', { name: 'Question bank' })).toBeVisible();
+  await page.getByRole('button', { name: 'Open high-score page' }).click();
+  await expect(page.getByRole('heading', { name: 'You found the sacred treasure!' })).toBeVisible();
+  await expect(page.getByLabel(/Enter your adventurer nickname/i)).toBeVisible();
+  await page.getByRole('button', { name: /Return to administrator/i }).click();
+  await expect(page.getByRole('heading', { name: 'Question bank' })).toBeVisible();
 });
