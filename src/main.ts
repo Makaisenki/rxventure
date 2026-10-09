@@ -40,6 +40,7 @@ let audioContext: AudioContext | undefined;
 let musicGain: GainNode | undefined;
 let musicTimer: number | undefined;
 let musicPlaying = false;
+let musicMode: 'menu' | 'ambience' | undefined;
 let musicSession = 0;
 
 function audio() {
@@ -68,6 +69,7 @@ function playBiomeTransition() { if (!settings.sound) return; const now = audio(
 function stopMusic() {
   musicSession += 1;
   musicPlaying = false;
+  musicMode = undefined;
   if (musicTimer) window.clearTimeout(musicTimer);
   musicTimer = undefined;
   const oldGain = musicGain;
@@ -80,25 +82,38 @@ function stopMusic() {
 function scheduleMusic(session = musicSession) {
   if (!musicPlaying || !musicGain || session !== musicSession) return;
   const ctx = audio(); const now = ctx.currentTime + .04;
-  // A short, original fantasy motif: warm sustained harmony with a bright
-  // ascending call. It is deliberately scheduled only while the menu loop is live.
-  const roots = [196, 220, 246.94, 293.66]; const root = roots[Math.floor(Math.random() * roots.length)];
-  [1, 1.25, 1.5, 2].forEach((ratio) => tone(root * ratio, now, 3.8, .075, 'triangle', musicGain));
-  [2, 2.5, 3, 4, 3].forEach((ratio, i) => tone(root * ratio, now + i * .36, .42, .06, 'sine', musicGain));
-  musicTimer = window.setTimeout(() => scheduleMusic(session), 3600);
+  if (musicMode === 'menu') {
+    // A short, original fantasy motif: warm sustained harmony with a bright
+    // ascending call. It plays only before the player enters the dungeon.
+    const roots = [196, 220, 246.94, 293.66]; const root = roots[Math.floor(Math.random() * roots.length)];
+    [1, 1.25, 1.5, 2].forEach((ratio) => tone(root * ratio, now, 3.8, .075, 'triangle', musicGain));
+    [2, 2.5, 3, 4, 3].forEach((ratio, i) => tone(root * ratio, now + i * .36, .42, .06, 'sine', musicGain));
+    musicTimer = window.setTimeout(() => scheduleMusic(session), 3600);
+  } else if (musicMode === 'ambience') {
+    // Gameplay gets a quiet dungeon soundscape rather than the main-menu BGM.
+    const roots = [65.41, 73.42, 82.41]; const root = roots[Math.floor(Math.random() * roots.length)];
+    [1, 1.5, 2].forEach((ratio) => tone(root * ratio, now, 5.6, .028, 'sine', musicGain));
+    tone(root * 4, now + 2.1, .95, .012, 'triangle', musicGain);
+    noise(now + .3, 1.8, .006, musicGain);
+    musicTimer = window.setTimeout(() => scheduleMusic(session), 5200);
+  }
 }
-function startMenuMusic() {
+function startMusic(mode: 'menu' | 'ambience') {
   if (!settings.sound) return;
   // Calling this again from the player's click resumes a browser-suspended
-  // context, while preserving the single scheduled menu loop.
+  // context, while preserving the active loop.
   const ctx = audio();
-  if (musicPlaying) return;
+  if (musicPlaying && musicMode === mode) return;
+  if (musicPlaying) stopMusic();
+  musicMode = mode;
   musicGain ??= ctx.createGain(); musicGain.connect(ctx.destination); musicGain.gain.cancelScheduledValues(ctx.currentTime); musicGain.gain.setTargetAtTime(.36, ctx.currentTime, .25); musicPlaying = true; scheduleMusic(musicSession);
 }
 function syncMusicForView() {
-  const menuMusicAllowed = view === 'title' || view === 'prologue';
-  document.body.dataset.musicScope = menuMusicAllowed ? 'menu' : 'off';
-  if (menuMusicAllowed) startMenuMusic();
+  const menuMusicAllowed = view === 'title' || view === 'prologue' || view === 'roles';
+  const ambienceAllowed = view === 'game' && document.body.dataset.paused !== 'true';
+  document.body.dataset.musicScope = menuMusicAllowed ? 'menu' : ambienceAllowed ? 'ambience' : 'off';
+  if (menuMusicAllowed) startMusic('menu');
+  else if (ambienceAllowed) startMusic('ambience');
   else stopMusic();
 }
 function playTreasureFanfare() {
