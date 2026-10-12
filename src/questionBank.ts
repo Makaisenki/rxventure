@@ -4,6 +4,9 @@ export type Role = 'Pharmacist' | 'Pharmacy Technician/Executive/Assistant' | 'S
 export type Question = { id: string; category: string; prompt: string; options: string[]; answer: string };
 export type Bank = { roles: Record<Role, string[]>; questions: Question[] };
 
+export const RUN_QUESTION_COUNT = 30;
+export const QUESTIONS_PER_BIOME = 6;
+
 const roles = ['Pharmacist', 'Pharmacy Technician/Executive/Assistant', 'Storekeeper/Health Assistant', 'Retail Staff'] as const;
 // Workbook authors may use the shorter label shown on the character-selection
 // screen. Keep the canonical role key internally so existing saved banks and
@@ -55,9 +58,9 @@ export function parseWorkbook(data: ArrayBuffer): Bank {
     const block = String(row[1] ?? '');
     return category && block ? parseBlock(category, block) : [];
   });
-  if (questions.length < 50) throw new Error('The workbook must contain at least 50 valid questions.');
+  if (questions.length < RUN_QUESTION_COUNT) throw new Error(`The workbook must contain at least ${RUN_QUESTION_COUNT} valid questions.`);
   for (const role of roles) {
-    if (eligibleQuestions({ roles: mappedRoles, questions }, role).length < 50) throw new Error(`${role} has fewer than 50 eligible questions.`);
+    if (eligibleQuestions({ roles: mappedRoles, questions }, role).length < RUN_QUESTION_COUNT) throw new Error(`${role} has fewer than ${RUN_QUESTION_COUNT} eligible questions.`);
   }
   return { roles: mappedRoles, questions };
 }
@@ -67,7 +70,7 @@ export function eligibleQuestions(bank: Bank, role: Role) {
   return bank.questions.filter((question) => allowed.has(canon(question.category)));
 }
 
-export function selectRun(bank: Bank, role: Role, count = 50): Question[] {
+export function selectRun(bank: Bank, role: Role, count = RUN_QUESTION_COUNT): Question[] {
   const pool = eligibleQuestions(bank, role);
   const groups = new Map<string, Question[]>();
   pool.forEach((question) => { const key = canon(question.category); groups.set(key, [...(groups.get(key) ?? []), question]); });
