@@ -1,5 +1,6 @@
 const ROLES = ['Pharmacist', 'Pharmacy Technician/Executive/Assistant', 'Storekeeper/Health Assistant', 'Retail Staff'];
 const rateWindow = new Map();
+const attemptRateWindow = new Map();
 
 export function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
@@ -33,6 +34,13 @@ export function allowSubmission(request) {
   const now = Date.now(); const entries = (rateWindow.get(key) ?? []).filter((time) => now - time < 60_000);
   if (entries.length >= 5) return false;
   entries.push(now); rateWindow.set(key, entries); return true;
+}
+
+export function allowAttempt(request) {
+  const key = request.headers.get('cf-connecting-ip') ?? 'unknown';
+  const now = Date.now(); const entries = (attemptRateWindow.get(key) ?? []).filter((time) => now - time < 60_000);
+  if (entries.length >= 180) return false;
+  entries.push(now); attemptRateWindow.set(key, entries); return true;
 }
 
 export { ROLES };
