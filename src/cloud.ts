@@ -1,6 +1,6 @@
 import type { Bank, Role } from './questionBank';
 
-export type CloudScore = { name: string; score: number; at: number };
+export type CloudScore = { name: string; branch: string | null; score: number; at: number };
 export type ActiveBank = { id: string; data: Bank };
 export type Branch = { id: string; name: string; position: number; active?: boolean };
 export type AttemptInput = { bankId: string; branchId: string; role: Role; questionId: string; category: string; prompt: string; correct: boolean };
@@ -27,7 +27,7 @@ export async function fetchActiveBank(): Promise<ActiveBank | null> { try { retu
 export async function fetchBranches(): Promise<Branch[]> { return (await api<{ branches: Branch[] }>('branches')).branches; }
 export async function recordAttempt(attempt: AttemptInput) { return api<{ ok: boolean }>('attempts', { method: 'POST', body: JSON.stringify(attempt) }); }
 export async function fetchScores(role: Role): Promise<CloudScore[]> { return (await api<{ entries: CloudScore[] }>(`leaderboard?role=${encodeURIComponent(role)}`)).entries; }
-export async function submitScore(role: Role, name: string, score: number) { return api<{ entry: CloudScore }>('leaderboard', { method: 'POST', body: JSON.stringify({ role, name, score }) }); }
+export async function submitScore(role: Role, name: string, score: number, branch?: string) { return api<{ entry: CloudScore }>('leaderboard', { method: 'POST', body: JSON.stringify({ role, name, score, branch }) }); }
 export function isAdminSignedIn() { return Boolean(sessionStorage.getItem(TOKEN_KEY)); }
 
 export async function signIn(email: string, password: string) {
