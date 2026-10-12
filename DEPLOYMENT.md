@@ -4,7 +4,7 @@
 
 1. The named operations owner creates the Cloudflare and Supabase accounts and stores recovery methods and the shared administrator password in the organisation password manager.
 2. Create a Supabase project, then create the shared administrator email/password user in **Authentication → Users**.
-3. Run `supabase/migrations/20260924_public_game.sql` in the Supabase SQL Editor.
+3. Run `supabase/migrations/20260924_public_game.sql`, then `supabase/migrations/20261012_learning_insights.sql`, then `supabase/migrations/20261012_leaderboard_branches.sql` in the Supabase SQL Editor.
 4. Copy `.env.example` to `.env.local` for local builds. Add the corresponding server values from `.dev.vars.example` as Cloudflare Pages production secrets; never commit either real secret file.
 
 ## Cloudflare Pages
