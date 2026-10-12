@@ -28,6 +28,9 @@ test('starts a role-specific dungeon run', async ({ page }) => {
   expect(columnCount).toBe(4);
   await page.locator('[data-pause]').click();
   await expect(page.locator('.pause')).toHaveClass(/show/);
+  await expect(page.getByRole('button', { name: 'Mute sound' })).toBeVisible();
+  await page.getByRole('button', { name: 'Mute sound' }).click();
+  await expect(page.getByRole('button', { name: 'Unmute sound' })).toBeVisible();
   await expect(page.locator('.door').first()).toBeDisabled();
   await page.locator('.door').first().evaluate((door) => door.dispatchEvent(new MouseEvent('click', { bubbles: true })));
   await expect(page.locator('.door.expanded')).toHaveCount(0);
