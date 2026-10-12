@@ -33,3 +33,9 @@ export async function onRequestGet({ request, env }) {
   })).sort((a, b) => b.incorrectRate - a.incorrectRate || b.incorrect - a.incorrect || b.attempts - a.attempts);
   return json({ bankId: bank.id, minimumAttempts: MINIMUM_ATTEMPTS, questions: formatted });
 }
+
+export async function onRequestDelete({ request, env }) {
+  if (!await requireAdmin(request, env)) return json({ error: 'Administrator sign-in required.' }, 401);
+  const response = await supabase(env, 'question_attempts?id=not.is.null', { method: 'DELETE' });
+  return response.ok ? json({ ok: true }) : json({ error: 'Unable to clear learning insights data.' }, 503);
+}
