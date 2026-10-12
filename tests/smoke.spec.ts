@@ -26,6 +26,17 @@ test('starts a role-specific dungeon run', async ({ page }) => {
     getComputedStyle(doors).gridTemplateColumns.trim().split(/\s+/).length,
   );
   expect(columnCount).toBe(4);
+  await page.evaluate(() => {
+    document.body.classList.add('contrast');
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  });
+  const contrastPortrait = await page.locator('.player-portrait').evaluate((portrait) => {
+    const rect = portrait.getBoundingClientRect();
+    return { position: getComputedStyle(portrait).position, bottom: rect.bottom, viewportHeight: window.innerHeight };
+  });
+  expect(contrastPortrait.position).toBe('fixed');
+  expect(contrastPortrait.bottom).toBeGreaterThan(contrastPortrait.viewportHeight - 16);
+  expect(contrastPortrait.bottom).toBeLessThanOrEqual(contrastPortrait.viewportHeight);
   await page.locator('[data-pause]').click();
   await expect(page.locator('.pause')).toHaveClass(/show/);
   await expect(page.getByRole('button', { name: 'Mute sound' })).toBeVisible();
