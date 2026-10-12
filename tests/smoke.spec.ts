@@ -26,6 +26,14 @@ test('starts a role-specific dungeon run', async ({ page }) => {
     getComputedStyle(doors).gridTemplateColumns.trim().split(/\s+/).length,
   );
   expect(columnCount).toBe(4);
+  const inactiveHeartStyle = await page.locator('.heart').last().evaluate((heart) => {
+    heart.classList.replace('heart-active', 'heart-empty');
+    const style = getComputedStyle(heart);
+    return { text: heart.textContent, color: style.color, textFill: style.webkitTextFillColor };
+  });
+  expect(inactiveHeartStyle.text).toContain('♥︎');
+  expect(inactiveHeartStyle.color).toBe('rgb(104, 113, 128)');
+  expect(inactiveHeartStyle.textFill).toBe('rgb(104, 113, 128)');
   await page.evaluate(() => {
     document.body.classList.add('contrast');
     window.scrollTo(0, document.documentElement.scrollHeight);
