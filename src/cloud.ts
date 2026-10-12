@@ -49,6 +49,7 @@ export async function uploadBank(bank: Bank, workbook: File) {
 
 export async function restoreBundledBank(bank: Bank) { return api<{ ok: boolean; id: string }>('admin/restore-bundled', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ bank }) }); }
 export async function clearLeaderboards() { return api<{ ok: boolean }>('admin/leaderboards', { method: 'DELETE', headers: adminHeaders() }); }
+export async function clearLearningInsights() { return api<{ ok: boolean }>('admin/insights', { method: 'DELETE', headers: adminHeaders() }); }
 export async function fetchAdminBranches() { return (await api<{ branches: Branch[] }>('admin/branches', { headers: adminHeaders() })).branches; }
 export async function createBranch(name: string, position: number) { return (await api<{ branch: Branch }>('admin/branches', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ name, position }) })).branch; }
 export async function updateBranch(id: string, update: Partial<Pick<Branch, 'name' | 'active' | 'position'>>) { return (await api<{ branch: Branch }>('admin/branches', { method: 'PATCH', headers: adminHeaders(), body: JSON.stringify({ id, ...update }) })).branch; }
