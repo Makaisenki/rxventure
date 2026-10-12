@@ -5,6 +5,8 @@ export async function onRequestPost({ request, env }) {
   const { bank } = await request.json().catch(() => ({}));
   if (!isValidBank(bank)) return json({ error: 'Bundled question bank is invalid.' }, 400);
   await supabase(env, 'question_banks?active=eq.true', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ active: false }) });
-  const response = await supabase(env, 'question_banks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ data: bank, source_name: 'Bundled Question Bank', active: true, is_default: true }) });
-  return response.ok ? json({ ok: true }) : json({ error: 'Unable to restore bundled question bank.' }, 503);
+  const response = await supabase(env, 'question_banks', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'return=representation' }, body: JSON.stringify({ data: bank, source_name: 'Bundled Question Bank', active: true, is_default: true }) });
+  if (!response.ok) return json({ error: 'Unable to restore bundled question bank.' }, 503);
+  const [created] = await response.json();
+  return json({ ok: true, id: created.id });
 }

@@ -14,6 +14,8 @@ export async function onRequestPost({ request, env }) {
   const stored = await storage(env, `object/question-banks/${sourcePath}`, { method: 'POST', headers: { 'content-type': workbook.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'x-upsert': 'false' }, body: await workbook.arrayBuffer() });
   if (!stored.ok) return json({ error: 'Unable to secure the original workbook.' }, 503);
   await supabase(env, 'question_banks?active=eq.true', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ active: false }) });
-  const response = await supabase(env, 'question_banks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ data: bank, source_name: sourceName, source_path: sourcePath, active: true, is_default: false }) });
-  return response.ok ? json({ ok: true }) : json({ error: 'Unable to activate question bank.' }, 503);
+  const response = await supabase(env, 'question_banks', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'return=representation' }, body: JSON.stringify({ data: bank, source_name: sourceName, source_path: sourcePath, active: true, is_default: false }) });
+  if (!response.ok) return json({ error: 'Unable to activate question bank.' }, 503);
+  const [created] = await response.json();
+  return json({ ok: true, id: created.id });
 }
