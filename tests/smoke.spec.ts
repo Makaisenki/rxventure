@@ -26,6 +26,13 @@ test('starts a role-specific dungeon run', async ({ page }) => {
     getComputedStyle(doors).gridTemplateColumns.trim().split(/\s+/).length,
   );
   expect(columnCount).toBe(4);
+  await page.locator('[data-pause]').click();
+  await expect(page.locator('.pause')).toHaveClass(/show/);
+  await expect(page.locator('.door').first()).toBeDisabled();
+  await page.locator('.door').first().evaluate((door) => door.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await expect(page.locator('.door.expanded')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.locator('.door').first()).toBeEnabled();
   await page.locator('.door').first().click();
   await expect(page.locator('.door.expanded')).toHaveCount(1);
   await page.screenshot({ path: '.logs/qa-gameplay.png', fullPage: true });
