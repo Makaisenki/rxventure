@@ -109,7 +109,7 @@ body.admin-page .panel{min-height:max(100svh,100%);background:transparent}
    with the question card instead of being fixed at 25vh, so long prompts can
    never be overlapped by doors. The added space is intentionally scrollable. */
 .game-ui{grid-template-rows:auto auto;height:auto;min-height:100svh;overflow:visible;align-content:start}
-.game-ui .doors{align-self:start;margin:clamp(88px,12vh,170px) auto 0}
+.game-ui .doors{align-self:start;margin:clamp(88px,12vh,170px) auto 0;transform:translateY(-5px)}
 
 /* Pausing creates an interaction shield over the entire quest. Only the
    pause panel sits above it; door controls are additionally disabled in HTML. */
