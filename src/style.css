@@ -108,11 +108,10 @@ body.admin-page .panel{min-height:max(100svh,100%);background:transparent}
 .victory label{display:grid;gap:8px;padding:12px 16px;border:1px solid #f5cc6b99;border-radius:16px;background:#0f1028ba;box-shadow:0 8px 25px #0008;color:#fff3cc;font-weight:700}.victory input{margin:0!important;min-width:min(360px,78vw);background:#fff9e8;color:#22152a}.victory .primary{font-size:1.08rem;padding:15px 38px}
 @media(max-width:720px){.victory-chest-stage{width:min(78vw,390px);height:min(34vh,300px)}.victory h2{font-size:clamp(2rem,8vw,3.1rem)}.victory label{width:min(92vw,420px)}}
 
-/* Reserve a clear reading gap below every question. The grid row now grows
-   with the question card instead of being fixed at 25vh, so long prompts can
-   never be overlapped by doors. The added space is intentionally scrollable. */
+/* Keep a compact buffer below the question. The grid row grows with the card,
+   so long prompts remain readable without leaving a large empty band. */
 .game-ui{grid-template-rows:auto auto;height:auto;min-height:100svh;overflow:visible;align-content:start}
-.game-ui .doors{align-self:start;margin:clamp(88px,12vh,170px) auto 0;transform:translateY(-5px)}
+.game-ui .doors{align-self:start;margin:clamp(24px,3vh,44px) auto 0;transform:translateY(-5px)}
 
 /* Pausing creates an interaction shield over the entire quest. Only the
    pause panel sits above it; door controls are additionally disabled in HTML. */
