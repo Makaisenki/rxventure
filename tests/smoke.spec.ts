@@ -118,9 +118,17 @@ test('keeps the menu BGM active on the leaderboard', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Leaderboard' }).click();
-  await expect(page.getByRole('heading', { name: 'Leaderboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hall of Prestige' })).toBeVisible();
+  await expect(page.locator('.leaderboard-content .eyebrow')).toHaveCount(0);
   await expect(page.getByText('Branch', { exact: true })).toBeVisible();
   await expect(page.getByText('North Branch')).toBeVisible();
+  await expect.poll(async () => page.locator('#score-list li').count()).toBe(1);
+  const columns = await page.locator('.leaderboard-content').evaluate((content) => {
+    const headers = [...content.querySelectorAll<HTMLElement>('.score-columns span')];
+    const cells = [...content.querySelectorAll<HTMLElement>('#score-list li > *')];
+    return headers.map((header, index) => ({ headerLeft: header.getBoundingClientRect().left, cellLeft: cells[index].getBoundingClientRect().left, headerRight: header.getBoundingClientRect().right, cellRight: cells[index].getBoundingClientRect().right }));
+  });
+  columns.forEach((column) => { expect(Math.abs(column.headerLeft - column.cellLeft)).toBeLessThanOrEqual(3); expect(Math.abs(column.headerRight - column.cellRight)).toBeLessThanOrEqual(3); });
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
 });
 
