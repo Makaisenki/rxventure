@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 test('starts a role-specific dungeon run', async ({ page }) => {
+  const attempts: Record<string, unknown>[] = [];
+  await page.route('**/api/question-bank', (route) => route.fulfill({ json: { bank: { id: 'bank-test', data: null } } }));
+  await page.route('**/api/branches', (route) => route.fulfill({ json: { branches: [{ id: 'branch-test', name: 'North Branch', position: 0 }] } }));
+  await page.route('**/api/attempts', async (route) => { attempts.push(route.request().postDataJSON()); await route.fulfill({ status: 201, json: { ok: true } }); });
   await page.goto('/');
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: /RxVenture/i })).toBeVisible();
@@ -8,6 +12,10 @@ test('starts a role-specific dungeon run', async ({ page }) => {
   await page.getByRole('button', { name: /Start quest/i }).click();
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
   await page.getByRole('button', { name: /Choose your role/i }).click();
+  await expect(page.getByRole('heading', { name: 'Select your Branch' })).toBeVisible();
+  await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
+  await page.getByLabel('Branch').selectOption('branch-test');
+  await page.getByRole('button', { name: /Continue to character selection/i }).click();
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
   await expect(page.locator('.ui-layer')).toHaveCSS('background-color', 'rgb(8, 27, 57)');
   await page.screenshot({ path: '.logs/qa-roles.png', fullPage: true });
@@ -15,6 +23,7 @@ test('starts a role-specific dungeon run', async ({ page }) => {
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'ambience');
   await expect(page.locator('.ui-layer')).toHaveCSS('background-color', 'rgb(8, 27, 57)');
   await expect(page.locator('.question-scroll')).toBeVisible();
+  await expect(page.getByText(/Floor 1 · 1\/30/)).toBeVisible();
   await expect(page.locator('.door')).toHaveCount(4);
   const layout = await page.evaluate(() => {
     const question = document.querySelector('.question-wrap')!.getBoundingClientRect();
@@ -53,11 +62,43 @@ test('starts a role-specific dungeon run', async ({ page }) => {
   await expect(page.locator('.door').first()).toBeDisabled();
   await page.locator('.door').first().evaluate((door) => door.dispatchEvent(new MouseEvent('click', { bubbles: true })));
   await expect(page.locator('.door.expanded')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Resume' }).click();
+  await page.getByRole('button', { name: 'Resume', exact: true }).click();
   await expect(page.locator('.door').first()).toBeEnabled();
   await page.locator('.door').first().click();
   await expect(page.locator('.door.expanded')).toHaveCount(1);
+  await page.locator('.door').first().click();
+  await expect.poll(() => attempts.length).toBe(1);
+  expect(attempts[0]).toMatchObject({ bankId: 'bank-test', branchId: 'branch-test', role: 'Pharmacist' });
+  expect(attempts[0]).not.toHaveProperty('name');
   await page.screenshot({ path: '.logs/qa-gameplay.png', fullPage: true });
+});
+
+test('requires an active branch before character selection', async ({ page }) => {
+  await page.route('**/api/question-bank', (route) => route.fulfill({ json: { bank: { id: 'bank-test', data: null } } }));
+  await page.route('**/api/branches', (route) => route.fulfill({ json: { branches: [] } }));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: /Start quest/i }).click();
+  await page.getByRole('button', { name: /Choose your role/i }).click();
+  await expect(page.getByText(/No active branches have been configured/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pharmacist' })).toHaveCount(0);
+});
+
+test('shows protected branch management and active-bank insights', async ({ page }) => {
+  await page.route('**/api/admin/branches', (route) => route.fulfill({ json: { branches: [{ id: 'branch-test', name: 'North Branch', position: 0, active: true }] } }));
+  await page.route('**/api/admin/insights', (route) => route.fulfill({ json: { bankId: 'bank-test', minimumAttempts: 5, questions: [{ id: 'q-1', category: 'Safety', prompt: 'Which action is safest?', attempts: 7, incorrect: 4, incorrectRate: 4 / 7, branches: [{ id: 'branch-test', name: 'North Branch', attempts: 3, incorrect: 2, incorrectRate: null }] }] } }));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.evaluate(() => sessionStorage.setItem('rxventure-admin-token', 'test-token'));
+  await page.getByRole('button', { name: 'Administration' }).click();
+  await page.getByRole('button', { name: 'Manage branches' }).click();
+  await expect(page.getByRole('heading', { name: 'Manage branches' })).toBeVisible();
+  await expect(page.getByText('North Branch')).toBeVisible();
+  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Learning insights & export' }).click();
+  await expect(page.getByRole('heading', { name: 'Learning insights' })).toBeVisible();
+  await page.getByRole('button', { name: /4\/7 incorrect/i }).click();
+  await expect(page.getByText('Hidden until 5 attempts')).toBeVisible();
 });
 
 test('opens title-screen accessibility settings', async ({ page }) => {
@@ -73,10 +114,13 @@ test('opens title-screen accessibility settings', async ({ page }) => {
 });
 
 test('keeps the menu BGM active on the leaderboard', async ({ page }) => {
+  await page.route('**/api/leaderboard**', (route) => route.fulfill({ json: { entries: [{ name: 'Ari', branch: 'North Branch', score: 2500, at: 0 }] } }));
   await page.goto('/');
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Leaderboard' }).click();
   await expect(page.getByRole('heading', { name: 'Leaderboard' })).toBeVisible();
+  await expect(page.getByText('Branch', { exact: true })).toBeVisible();
+  await expect(page.getByText('North Branch')).toBeVisible();
   await expect(page.locator('body')).toHaveAttribute('data-music-scope', 'menu');
 });
 
@@ -142,4 +186,16 @@ test('administrator can preview and leave the high-score page', async ({ page })
   await page.screenshot({ path: '.logs/qa-victory-vault.png', fullPage: true });
   await page.getByRole('button', { name: /Return to administrator/i }).click();
   await expect(page.getByRole('heading', { name: 'Question bank' })).toBeVisible();
+});
+
+test('administrator can clear learning insights separately from leaderboards', async ({ page }) => {
+  let deleteRequested = false;
+  await page.route('**/api/admin/insights', (route) => { deleteRequested = route.request().method() === 'DELETE'; return route.fulfill({ json: { ok: true } }); });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.evaluate(() => sessionStorage.setItem('rxventure-admin-token', 'test-token'));
+  await page.getByRole('button', { name: 'Administration' }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Clear all learning insights data' }).click();
+  await expect.poll(() => deleteRequested).toBe(true);
 });
