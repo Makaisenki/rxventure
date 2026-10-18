@@ -30,7 +30,8 @@ test('starts a role-specific dungeon run', async ({ page }) => {
     const firstDoor = document.querySelector('.door')!.getBoundingClientRect();
     return { questionBottom: question.bottom, firstDoorTop: firstDoor.top };
   });
-  expect(layout.firstDoorTop).toBeGreaterThan(layout.questionBottom + 48);
+  expect(layout.firstDoorTop).toBeGreaterThan(layout.questionBottom + 16);
+  expect(layout.firstDoorTop).toBeLessThan(layout.questionBottom + 50);
   const columnCount = await page.locator('.doors').evaluate((doors) =>
     getComputedStyle(doors).gridTemplateColumns.trim().split(/\s+/).length,
   );
