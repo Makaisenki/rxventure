@@ -175,9 +175,9 @@ const roleLabel = (role: Role) => role === 'Pharmacy Technician/Executive/Assist
     : role;
 const roles = () => `<section class="panel"><p class="eyebrow">Choose your calling</p><h2>Which adventurer are you?</h2><div class="role-grid">${roleList.map((role, i) => `<button class="role-card" data-role="${role}"><span class="portrait p${i}"><img src="/assets/${portraitAssets[i]}" alt=""/></span><strong>${roleLabel(role)}</strong><small>Enter the dungeon</small></button>`).join('')}</div><button data-go="title">Back</button></section>`;
 function trapEffect(trap: Trap | null) {
-  if (trap === 'arrows') return `<div class="trap-overlay trap-arrows" aria-hidden="true"><i class="trap-arrow arrow-one"></i><i class="trap-arrow arrow-two"></i><i class="trap-arrow arrow-three"></i><i class="trap-arrow arrow-four"></i></div>`;
-  if (trap === 'boulders') return `<div class="trap-overlay trap-boulders" aria-hidden="true"><i class="trap-boulder boulder-one"></i><i class="trap-boulder boulder-two"></i><i class="trap-boulder boulder-three"></i></div>`;
-  if (trap === 'axe') return `<div class="trap-overlay trap-axe" aria-hidden="true"><span class="axe-swing"><i class="axe-handle"></i><i class="axe-blade"></i></span></div>`;
+  if (trap === 'arrows') return `<div class="trap-overlay trap-arrows" aria-hidden="true"><img class="trap-arrow" src="/assets/trap-arrows.png" alt=""/></div>`;
+  if (trap === 'boulders') return `<div class="trap-overlay trap-boulders" aria-hidden="true"><img class="trap-boulder boulder-one" src="/assets/trap-boulder.png" alt=""/><img class="trap-boulder boulder-two" src="/assets/trap-boulder.png" alt=""/><img class="trap-boulder boulder-three" src="/assets/trap-boulder.png" alt=""/></div>`;
+  if (trap === 'axe') return `<div class="trap-overlay trap-axe" aria-hidden="true"><img class="axe-swing" src="/assets/trap-pendulum-axe.png" alt=""/></div>`;
   return '';
 }
 function game() {
