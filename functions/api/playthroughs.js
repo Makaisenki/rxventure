@@ -26,3 +26,10 @@ export async function onRequestPatch({ request, env }) {
   const response = await supabase(env, `playthroughs?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ score, completed, finished_at: new Date().toISOString() }) });
   return response.ok ? json({ ok: true }) : json({ error: 'Unable to save the playthrough result.' }, 503);
 }
+
+export async function onRequestDelete({ request, env }) {
+  const id = new URL(request.url).searchParams.get('id');
+  if (!validId(id)) return json({ error: 'Invalid playthrough.' }, 400);
+  const response = await supabase(env, `playthroughs?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+  return response.ok ? json({ ok: true }) : json({ error: 'Unable to remove the unfinished playthrough.' }, 503);
+}
