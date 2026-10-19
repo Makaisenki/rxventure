@@ -126,6 +126,19 @@ body{height:auto;min-height:100svh;overflow-x:clip;overflow-y:visible!important;
 .game-ui.is-paused .pause{z-index:50}
 .game-ui.is-paused .door{cursor:not-allowed;opacity:.58;filter:grayscale(.25) brightness(.7)}
 
+/* A single tap locks an answer without exposing the browser's blue tap flash.
+   The chosen doorway receives a short fantasy glow, while the remaining doors
+   recede until the correct/wrong-answer reaction has completed. */
+.game-ui .door{-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .16s ease,filter .16s ease,opacity .16s ease}
+.game-ui .door:focus{outline:none}
+.game-ui .door:focus-visible{outline:3px solid #ffe6a0;outline-offset:7px;border-radius:12px}
+.game-ui .doors.is-resolving .door:not(.selected){opacity:.58;filter:brightness(.62) saturate(.72) drop-shadow(0 8px 10px #0008)}
+.game-ui .door.selected{z-index:6;transform:translateY(6px) scale(.975);filter:drop-shadow(0 0 12px #ffe37d) drop-shadow(0 0 28px #d69b28cc) drop-shadow(0 8px 10px #0008)}
+.game-ui .door.selected::after{content:'';position:absolute;z-index:1;inset:15% 8% 12%;border:2px solid #ffe69b;border-radius:48% 48% 18% 18%;box-shadow:inset 0 0 18px #ffe18a88,0 0 18px #ffd565cc;pointer-events:none;animation:door-rune-flare .58s ease-out both}
+.game-ui .door.selected .plaque{z-index:2;border-color:#ffe49a;box-shadow:0 0 0 2px #9a692dbb,0 0 18px #ffd466aa;background:#f7e6b4}
+@keyframes door-rune-flare{0%{opacity:0;scale:.88}42%{opacity:1;scale:1.035}100%{opacity:.82;scale:1}}
+@media(prefers-reduced-motion:reduce){.game-ui .door,.game-ui .door.selected::after{transition:none;animation:none}.game-ui .door.selected{transform:none}}
+
 /* Wrong answers trigger a brief trap in front of the adventurer. Each effect
    is decorative only, so it never blocks a control or changes the layout. */
 .trap-overlay{position:fixed;inset:0;z-index:48;overflow:hidden;pointer-events:none}
