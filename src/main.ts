@@ -4,6 +4,7 @@ import { Bank, Question, QUESTIONS_PER_BIOME, Role, RUN_QUESTION_COUNT, parseWor
 import { Branch, LearningInsights, clearLeaderboards, clearLearningInsights, createBranch, downloadLearningInsights, fetchActiveBank, fetchAdminBranches, fetchBranches, fetchLearningInsights, fetchScores, isAdminSignedIn, recordAttempt, restoreBundledBank, signIn, signOut, submitScore, updateBranch, uploadBank } from './cloud';
 
 type View = 'disclaimer' | 'title' | 'prologue' | 'branch' | 'roles' | 'game' | 'leaderboard' | 'settings' | 'adminLogin' | 'admin' | 'adminBranches' | 'adminInsights' | 'victory' | 'gameover';
+type Trap = 'arrows' | 'boulders' | 'axe';
 const KEY = { settings: 'rxventure-settings' };
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let bank: Bank;
@@ -15,6 +16,7 @@ let index = 0, score = 0, lives = 5, timeLeft = 10, graceLeft = 6, timer: number
 let expanded = -1;
 let resolving = false;
 let reaction: 'idle' | 'correct' | 'wrong' = 'idle';
+let activeTrap: Trap | null = null;
 let displayedOptions: { text: string; letter: string }[] = [];
 let adminError = '';
 let adminScorePreview = false;
@@ -73,7 +75,18 @@ function noise(at: number, duration: number, volume: number, destination?: Audio
 }
 function playDoorSelect() { if (!settings.sound) return; const now = audio().currentTime; tone(260, now, .08, .035, 'triangle', undefined, 320); }
 function playCorrect() { if (!settings.sound) return; const now = audio().currentTime; tone(660, now, .22, .055, 'sine'); tone(880, now + .09, .32, .05, 'sine'); tone(1320, now + .19, .38, .035, 'sine'); }
-function playDamage() { if (!settings.sound) return; const now = audio().currentTime; tone(150, now, .34, .09, 'triangle', undefined, 65); tone(94, now + .06, .45, .075, 'sawtooth', undefined, 42); noise(now + .08, .36, .035); navigator.vibrate?.([45, 35, 85]); }
+function playTrap(trap: Trap) {
+  if (!settings.sound) return;
+  const now = audio().currentTime;
+  if (trap === 'arrows') {
+    noise(now, .16, .04); tone(1060, now, .22, .045, 'triangle', undefined, 280); noise(now + .17, .14, .035);
+  } else if (trap === 'boulders') {
+    [0, .16, .32].forEach((delay, i) => { tone(96 - i * 12, now + delay, .32, .085, 'triangle', undefined, 42); noise(now + delay + .12, .18, .05); });
+  } else {
+    tone(760, now, .46, .07, 'sawtooth', undefined, 110); noise(now + .32, .2, .05); tone(82, now + .34, .3, .075, 'triangle', undefined, 48);
+  }
+  navigator.vibrate?.(trap === 'boulders' ? [45, 55, 75, 55, 95] : [35, 35, 70]);
+}
 function playBiomeTransition() { if (!settings.sound) return; const now = audio().currentTime; [392, 494, 587].forEach((note, i) => tone(note, now + i * .12, .42, .035, 'sine')); }
 function stopMusic() {
   musicSession += 1;
@@ -161,6 +174,12 @@ const roleLabel = (role: Role) => role === 'Pharmacy Technician/Executive/Assist
     ? 'SK / HA'
     : role;
 const roles = () => `<section class="panel"><p class="eyebrow">Choose your calling</p><h2>Which adventurer are you?</h2><div class="role-grid">${roleList.map((role, i) => `<button class="role-card" data-role="${role}"><span class="portrait p${i}"><img src="/assets/${portraitAssets[i]}" alt=""/></span><strong>${roleLabel(role)}</strong><small>Enter the dungeon</small></button>`).join('')}</div><button data-go="title">Back</button></section>`;
+function trapEffect(trap: Trap | null) {
+  if (trap === 'arrows') return `<div class="trap-overlay trap-arrows" aria-hidden="true"><i class="trap-arrow arrow-one"></i><i class="trap-arrow arrow-two"></i><i class="trap-arrow arrow-three"></i><i class="trap-arrow arrow-four"></i></div>`;
+  if (trap === 'boulders') return `<div class="trap-overlay trap-boulders" aria-hidden="true"><i class="trap-boulder boulder-one"></i><i class="trap-boulder boulder-two"></i><i class="trap-boulder boulder-three"></i></div>`;
+  if (trap === 'axe') return `<div class="trap-overlay trap-axe" aria-hidden="true"><span class="axe-swing"><i class="axe-handle"></i><i class="axe-blade"></i></span></div>`;
+  return '';
+}
 function game() {
   const question = run[index];
   const floor = Math.floor(index / QUESTIONS_PER_BIOME) + 1;
@@ -172,7 +191,7 @@ function game() {
   // U+FE0E forces a text-style heart rather than the colour emoji glyph that
   // iPhone browsers otherwise choose and cannot recolour for lost lives.
   const hearts = Array.from({ length: 5 }, (_, i) => `<span class="heart ${i < lives ? 'heart-active' : 'heart-empty'}">&#9829;&#65038;</span>`).join('');
-  return `<section class="game-ui biome-${floor} ${paused ? 'is-paused' : ''}"><header class="hud"><span class="lives" aria-label="${lives} of 5 lives"><span class="heart-row" aria-hidden="true">${hearts}</span></span><b>${timerText}</b><span>${score} ✦ &nbsp; Floor ${floor} · ${index + 1}/${RUN_QUESTION_COUNT}</span><button data-pause>Ⅱ</button></header><main class="question-wrap"><p class="category">${question.category}</p><div class="question-scroll">${question.prompt}</div></main><div class="doors">${displayedOptions.map((option, i) => `<button class="door ${expanded === i ? 'expanded' : ''}" data-option="${i}" ${(resolving || paused) ? 'disabled' : ''}><img src="/assets/${doorAsset}" alt=""/><span class="plaque"><b>${option.letter}</b> ${option.text}</span></button>`).join('')}</div><aside class="player-portrait ${reaction}"><img src="/assets/${avatar}" alt="${roleLabel(chosenRole)} adventurer"/></aside><aside class="pause ${paused ? 'show' : ''}"><h3>Pause quest</h3><button data-toggle-sound aria-pressed="${settings.sound}">${settings.sound ? 'Mute sound' : 'Unmute sound'}</button><button data-resume>Resume</button><button data-return-menu>Return to main menu</button></aside></section>`;
+  return `<section class="game-ui biome-${floor} ${paused ? 'is-paused' : ''}"><header class="hud"><span class="lives" aria-label="${lives} of 5 lives"><span class="heart-row" aria-hidden="true">${hearts}</span></span><b>${timerText}</b><span>${score} ✦ &nbsp; Floor ${floor} · ${index + 1}/${RUN_QUESTION_COUNT}</span><button data-pause>Ⅱ</button></header><main class="question-wrap"><p class="category">${question.category}</p><div class="question-scroll">${question.prompt}</div></main><div class="doors">${displayedOptions.map((option, i) => `<button class="door ${expanded === i ? 'expanded' : ''}" data-option="${i}" ${(resolving || paused) ? 'disabled' : ''}><img src="/assets/${doorAsset}" alt=""/><span class="plaque"><b>${option.letter}</b> ${option.text}</span></button>`).join('')}</div><aside class="player-portrait ${reaction}"><img src="/assets/${avatar}" alt="${roleLabel(chosenRole)} adventurer"/></aside>${trapEffect(activeTrap)}<aside class="pause ${paused ? 'show' : ''}"><h3>Pause quest</h3><button data-toggle-sound aria-pressed="${settings.sound}">${settings.sound ? 'Mute sound' : 'Unmute sound'}</button><button data-resume>Resume</button><button data-return-menu>Return to main menu</button></aside></section>`;
 }
 const leaderboard = () => `<section class="panel leaderboard"><div class="leaderboard-board"><img class="leaderboard-board-art" src="/assets/gilded-scroll.png" alt=""/><div class="leaderboard-content"><h2>Hall of Prestige</h2><div class="tabs">${roleList.map((role, i) => `<button class="${i === 0 ? 'active' : ''}" data-tab="${i}">${roleLabel(role)}</button>`).join('')}</div><div class="score-columns" aria-hidden="true"><span>Player</span><span>Branch</span><span>Score</span></div><ol id="score-list"></ol><button data-go="title">Back</button></div></div></section>`;
 const settingsView = () => `<section class="panel"><h2>Quest Settings</h2><div class="setting-list"><label><input type="checkbox" data-setting="sound" ${settings.sound ? 'checked' : ''}/> Sound and music</label><label><input type="checkbox" data-setting="large" ${settings.large ? 'checked' : ''}/> Larger text</label><label><input type="checkbox" data-setting="contrast" ${settings.contrast ? 'checked' : ''}/> High contrast</label></div><button data-go="title">Back</button></section>`;
@@ -232,10 +251,10 @@ async function openBranchSelection() { branchError = ''; try { branches = await 
 async function openAdminBranches() { branchError = ''; try { branches = await fetchAdminBranches(); view = 'adminBranches'; } catch (error) { branchError = error instanceof Error ? error.message : 'Unable to load branches.'; view = 'adminBranches'; } render(); }
 async function loadInsights() { try { insights = await fetchLearningInsights(); } catch (error) { insightsError = error instanceof Error ? error.message : 'Unable to load learning insights.'; } if (view === 'adminInsights') render(); }
 async function showScores(index: number) { const list = document.querySelector('#score-list'); if (!list) return; const role = roleList[index]; list.innerHTML = '<li>Loading champions…</li>'; document.querySelectorAll('.tabs button').forEach((button, i) => button.classList.toggle('active', i === index)); try { const entries = await fetchScores(role); cloudOnline = true; list.innerHTML = entries.length ? entries.map((entry, i) => `<li><span>${i + 1}. ${entry.name}</span><span class="score-branch">${entry.branch ?? '—'}</span><b>${entry.score}</b></li>`).join('') : '<li>No champion has claimed this path yet.</li>'; } catch { cloudOnline = false; list.innerHTML = '<li>Leaderboard temporarily unavailable. Please try again when you are online.</li>'; } }
-function start(role: Role) { if (!chosenBranch || !activeBankId) { branchError = 'Select an active branch while connected before beginning a tracked run.'; view = 'branch'; render(); return; } adminScorePreview = false; chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; render(); beginTimer(); }
+function start(role: Role) { if (!chosenBranch || !activeBankId) { branchError = 'Select an active branch while connected before beginning a tracked run.'; view = 'branch'; render(); return; } adminScorePreview = false; chosenRole = role; run = selectRun(bank, role); index = 0; score = 0; lives = 5; expanded = -1; resolving = false; reaction = 'idle'; activeTrap = null; displayedOptions = shuffler(run[index]); view = 'game'; document.body.dataset.paused = 'false'; render(); beginTimer(); }
 function beginTimer(reset = true) { stopTimer(); if (reset) { graceLeft = 6; timeLeft = 10; } timer = window.setInterval(() => { if (graceLeft > 0) graceLeft = Math.max(0, graceLeft - .1); else timeLeft = Math.max(0, timeLeft - .1); const target = document.querySelector('.hud b'); if (target) target.textContent = graceLeft > 0 ? `⌛ Bonus begins in ${graceLeft.toFixed(1)}s` : timeLeft > 0 ? `⌛ Bonus ${timeLeft.toFixed(1)}s` : '⌛ Score locked'; }, 100); }
 function choose(optionIndex: number) { if (resolving || document.body.dataset.paused === 'true') return; if (expanded !== optionIndex) { playDoorSelect(); expanded = optionIndex; render(); return; } const option = displayedOptions[optionIndex]; answer(option.letter === run[index].answer); }
-function answer(correct: boolean) { const question = run[index]; if (activeBankId && chosenBranch) void recordAttempt({ bankId: activeBankId, branchId: chosenBranch.id, role: chosenRole, questionId: question.id, category: question.category, prompt: question.prompt, correct }).catch(() => { /* A run starts only when tracking is online; keep gameplay responsive if the connection drops later. */ }); stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; if (correct) playCorrect(); else { playDamage(); damageFlash(); } if (correct) score += graceLeft > 0 ? 100 : Math.max(0, Math.ceil(timeLeft * 10)); else lives -= 1; expanded = -1; render(); window.setTimeout(() => { reaction = 'idle'; resolving = false; if (!correct && lives <= 0) { playGameOver(); stopMusic(); view = 'gameover'; render(); return; } index += 1; if (index >= RUN_QUESTION_COUNT) { view = 'victory'; playTreasureFanfare(); render(); return; } if (index % QUESTIONS_PER_BIOME === 0) playBiomeTransition(); displayedOptions = shuffler(run[index]); render(); beginTimer(); }, 650); }
+function answer(correct: boolean) { const question = run[index]; if (activeBankId && chosenBranch) void recordAttempt({ bankId: activeBankId, branchId: chosenBranch.id, role: chosenRole, questionId: question.id, category: question.category, prompt: question.prompt, correct }).catch(() => { /* A run starts only when tracking is online; keep gameplay responsive if the connection drops later. */ }); stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; if (correct) playCorrect(); else { activeTrap = ['arrows', 'boulders', 'axe'][Math.floor(Math.random() * 3)] as Trap; playTrap(activeTrap); damageFlash(); } if (correct) score += graceLeft > 0 ? 100 : Math.max(0, Math.ceil(timeLeft * 10)); else lives -= 1; expanded = -1; render(); window.setTimeout(() => { reaction = 'idle'; activeTrap = null; resolving = false; if (!correct && lives <= 0) { playGameOver(); stopMusic(); view = 'gameover'; render(); return; } index += 1; if (index >= RUN_QUESTION_COUNT) { view = 'victory'; playTreasureFanfare(); render(); return; } if (index % QUESTIONS_PER_BIOME === 0) playBiomeTransition(); displayedOptions = shuffler(run[index]); render(); beginTimer(); }, correct ? 650 : 1250); }
 
 async function bootstrap() { const response = await fetch('/question-bank.xlsx'); defaultBank = parseWorkbook(await response.arrayBuffer()); try { const active = await fetchActiveBank(); bank = active?.data ?? defaultBank; activeBankId = active?.id ?? null; cloudOnline = Boolean(active); } catch { bank = defaultBank; cloudOnline = false; activeBankId = null; } render(); }
 bootstrap().catch((error) => { app.innerHTML = `<pre>Unable to load question bank: ${error instanceof Error ? error.message : String(error)}</pre>`; });
