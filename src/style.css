@@ -97,6 +97,13 @@ body.admin-page .panel{min-height:max(100svh,100%);background:transparent}
 #app>canvas{position:fixed!important;inset:0!important;z-index:0!important;width:100vw!important;height:100svh!important;pointer-events:none}
 .ui-layer{position:relative;inset:auto;z-index:2;min-height:100svh}
 
+/* Safari uses the document element as the scroll container more often than
+   Chromium. Keep the full page in normal flow so long game and admin screens
+   can always be reached with a native swipe. */
+html{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
+body{height:auto;min-height:100svh;overflow-x:clip;overflow-y:visible!important;touch-action:pan-y}
+#app,.ui-layer{height:auto;overflow:visible}
+
 /* Grand finale: a dedicated treasure vault makes the chest and final score
    feel like a reward while the dark overlay preserves form readability. */
 .victory{width:100vw;max-width:none;margin:0;min-height:100svh;background:linear-gradient(180deg,#070d2acc 0%,#10102ed9 48%,#070d2aea 100%),url('/assets/treasure-vault-background.png') center/cover no-repeat!important;gap:clamp(6px,1.5vh,16px);padding-top:clamp(24px,5vh,64px);padding-bottom:clamp(36px,6vh,76px)}
