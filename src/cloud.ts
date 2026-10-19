@@ -3,7 +3,8 @@ import type { Bank, Role } from './questionBank';
 export type CloudScore = { name: string; branch: string | null; score: number; at: number };
 export type ActiveBank = { id: string; data: Bank };
 export type Branch = { id: string; name: string; position: number; active?: boolean };
-export type AttemptInput = { bankId: string; branchId: string; role: Role; questionId: string; category: string; prompt: string; correct: boolean };
+export type AttemptInput = { bankId: string; branchId: string; role: Role; questionId: string; category: string; prompt: string; correct: boolean; runId?: string };
+export type PlaythroughInput = { bankId: string; branchId: string; role: Role; playerName: string };
 export type InsightBranch = { id: string; name: string; attempts: number; incorrect: number; incorrectRate: number | null };
 export type InsightQuestion = { id: string; category: string; prompt: string; attempts: number; incorrect: number; incorrectRate: number; branches: InsightBranch[] };
 export type LearningInsights = { bankId: string | null; minimumAttempts: number; questions: InsightQuestion[] };
@@ -27,7 +28,9 @@ export async function fetchActiveBank(): Promise<ActiveBank | null> { try { retu
 export async function fetchBranches(): Promise<Branch[]> { return (await api<{ branches: Branch[] }>('branches')).branches; }
 export async function recordAttempt(attempt: AttemptInput) { return api<{ ok: boolean }>('attempts', { method: 'POST', body: JSON.stringify(attempt) }); }
 export async function fetchScores(role: Role): Promise<CloudScore[]> { return (await api<{ entries: CloudScore[] }>(`leaderboard?role=${encodeURIComponent(role)}`)).entries; }
-export async function submitScore(role: Role, name: string, score: number, branch?: string) { return api<{ entry: CloudScore }>('leaderboard', { method: 'POST', body: JSON.stringify({ role, name, score, branch }) }); }
+export async function createPlaythrough(input: PlaythroughInput) { return api<{ run: { id: string } }>('playthroughs', { method: 'POST', body: JSON.stringify(input) }); }
+export async function finishPlaythrough(id: string, score: number, completed: boolean) { return api<{ ok: boolean }>('playthroughs', { method: 'PATCH', body: JSON.stringify({ id, score, completed }) }); }
+export async function submitScore(role: Role, name: string, score: number, branch?: string) { return api<{ entry: CloudScore; rank: number }>('leaderboard', { method: 'POST', body: JSON.stringify({ role, name, score, branch }) }); }
 export function isAdminSignedIn() { return Boolean(sessionStorage.getItem(TOKEN_KEY)); }
 
 export async function signIn(email: string, password: string) {
@@ -54,8 +57,8 @@ export async function fetchAdminBranches() { return (await api<{ branches: Branc
 export async function createBranch(name: string, position: number) { return (await api<{ branch: Branch }>('admin/branches', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ name, position }) })).branch; }
 export async function updateBranch(id: string, update: Partial<Pick<Branch, 'name' | 'active' | 'position'>>) { return (await api<{ branch: Branch }>('admin/branches', { method: 'PATCH', headers: adminHeaders(), body: JSON.stringify({ id, ...update }) })).branch; }
 export async function fetchLearningInsights() { return api<LearningInsights>('admin/insights', { headers: adminHeaders() }); }
-export async function downloadLearningInsights(format: 'summary' | 'detail') {
+export async function downloadLearningInsights(format: 'summary' | 'detail' | 'runs') {
   const response = await fetch(`/api/admin/insights-export?format=${format}`, { headers: adminHeaders() });
   if (!response.ok) throw new Error((await response.json().catch(() => ({ error: 'Unable to export insights.' }))).error ?? 'Unable to export insights.');
-  const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a'); link.href = url; link.download = `rxventure-${format}-active-bank.csv`; link.click(); URL.revokeObjectURL(url);
+  const url = URL.createObjectURL(await response.blob()); const link = document.createElement('a'); link.href = url; link.download = format === 'runs' ? 'rxventure-playthroughs-active-bank.csv' : `rxventure-${format}-active-bank.csv`; link.click(); URL.revokeObjectURL(url);
 }
