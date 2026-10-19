@@ -18,5 +18,7 @@ export async function onRequestPost({ request, env }) {
   const response = await supabase(env, 'leaderboard_entries', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'return=representation' }, body: JSON.stringify({ role, nickname, branch_name: branchName || null, score }) });
   if (!response.ok) return json({ error: 'Unable to save score.' }, 503);
   const [entry] = await response.json();
-  return json({ entry: { name: entry.nickname, branch: entry.branch_name ?? null, score: entry.score, at: Date.parse(entry.created_at) } }, 201);
+  const aheadResponse = await supabase(env, `leaderboard_entries?role=eq.${encodeURIComponent(role)}&or=${encodeURIComponent(`(score.gt.${score},and(score.eq.${score},created_at.lt.${entry.created_at}))`)}&select=id&limit=100000`);
+  const ahead = aheadResponse.ok ? await aheadResponse.json() : [];
+  return json({ entry: { name: entry.nickname, branch: entry.branch_name ?? null, score: entry.score, at: Date.parse(entry.created_at) }, rank: ahead.length + 1 }, 201);
 }
