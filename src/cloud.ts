@@ -30,6 +30,7 @@ export async function recordAttempt(attempt: AttemptInput) { return api<{ ok: bo
 export async function fetchScores(role: Role): Promise<CloudScore[]> { return (await api<{ entries: CloudScore[] }>(`leaderboard?role=${encodeURIComponent(role)}`)).entries; }
 export async function createPlaythrough(input: PlaythroughInput) { return api<{ run: { id: string } }>('playthroughs', { method: 'POST', body: JSON.stringify(input) }); }
 export async function finishPlaythrough(id: string, score: number, completed: boolean) { return api<{ ok: boolean }>('playthroughs', { method: 'PATCH', body: JSON.stringify({ id, score, completed }) }); }
+export async function discardPlaythrough(id: string) { return api<{ ok: boolean }>(`playthroughs?id=${encodeURIComponent(id)}`, { method: 'DELETE' }); }
 export async function submitScore(role: Role, name: string, score: number, branch?: string) { return api<{ entry: CloudScore; rank: number }>('leaderboard', { method: 'POST', body: JSON.stringify({ role, name, score, branch }) }); }
 export function isAdminSignedIn() { return Boolean(sessionStorage.getItem(TOKEN_KEY)); }
 
