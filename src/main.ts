@@ -172,6 +172,7 @@ const title = () => `<section class="hero"><p class="eyebrow">A pharmacy quest f
 const prologue = () => `<section class="panel story"><p class="eyebrow">The call to adventure</p><h2>The kingdom needs your knowledge.</h2><p>Deep in the enchanted dungeon rests a treasure that will make your pharmacy the most prestigious in the realm.</p><p>Answer swiftly. Choose the right doors. Protect your five lives.</p><button class="primary" data-open-branch>Choose your role</button></section>`;
 const branchSelection = () => `<section class="panel branch-selection"><p class="eyebrow">Before you enter</p><h2>Select your Branch</h2>${branchError ? `<p class="pin-error" role="alert">${branchError}</p>` : ''}${branchesOnline && branches.length ? `<label for="branch-select">Branch<select id="branch-select" data-branch-select><option value="">Select your branch</option>${branches.map((branch) => `<option value="${branch.id}">${branch.name}</option>`).join('')}</select></label><label for="player-name">Player name<input id="player-name" data-player-name maxlength="16" autocomplete="nickname" value="${playerName}" required/></label><button class="primary" data-confirm-branch disabled>Continue to character selection</button>` : `<p class="cloud-status">${branchesOnline ? 'No active branches have been configured. Please ask an administrator to set up branches before playing.' : 'Branch tracking is unavailable. Reconnect and try again.'}</p>`}<button data-go="prologue">Back</button></section>`;
 const portraitAssets = ['role-pharmacist.png', 'role-technician.png', 'role-storekeeper.png', 'role-retail.png'];
+const happyPortraitAssets = ['role-pharmacist-happy.png', 'role-technician-happy.png', 'role-storekeeper-happy.png', 'role-retail-happy.png'];
 const injuredPortraitAssets = ['role-pharmacist-injured.png', 'role-technician-injured.png', 'role-storekeeper-injured.png', 'role-retail-injured.png'];
 const roleLabel = (role: Role) => role === 'Pharmacy Technician/Executive/Assistant'
   ? 'PA / PT / PE'
@@ -191,7 +192,7 @@ function game() {
   const paused = document.body.dataset.paused === 'true';
   const timerText = graceLeft > 0 ? `⌛ Bonus begins in ${graceLeft.toFixed(1)}s` : timeLeft > 0 ? `⌛ Bonus ${timeLeft.toFixed(1)}s` : '⌛ Score locked';
   const avatarIndex = roleList.indexOf(chosenRole);
-  const avatar = reaction === 'wrong' ? injuredPortraitAssets[avatarIndex] : portraitAssets[avatarIndex];
+  const avatar = reaction === 'correct' ? happyPortraitAssets[avatarIndex] : reaction === 'wrong' ? injuredPortraitAssets[avatarIndex] : portraitAssets[avatarIndex];
   const doorAsset = ['magic-door.png', 'door-crystal.png', 'door-castle.png', 'door-library.png', 'door-vault.png'][floor - 1];
   // U+FE0E forces a text-style heart rather than the colour emoji glyph that
   // iPhone browsers otherwise choose and cannot recolour for lost lives.
