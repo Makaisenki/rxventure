@@ -36,6 +36,7 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestDelete({ request, env }) {
   if (!await requireAdmin(request, env)) return json({ error: 'Administrator sign-in required.' }, 401);
-  const response = await supabase(env, 'question_attempts?id=not.is.null', { method: 'DELETE' });
-  return response.ok ? json({ ok: true }) : json({ error: 'Unable to clear learning insights data.' }, 503);
+  const attemptsResponse = await supabase(env, 'question_attempts?id=not.is.null', { method: 'DELETE' });
+  const playthroughsResponse = await supabase(env, 'playthroughs?id=not.is.null', { method: 'DELETE' });
+  return attemptsResponse.ok && playthroughsResponse.ok ? json({ ok: true }) : json({ error: 'Unable to clear learning insights data.' }, 503);
 }
