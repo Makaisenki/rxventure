@@ -136,6 +136,9 @@ body{height:auto;min-height:100svh;overflow-x:clip;overflow-y:visible!important;
 .game-ui .door.selected{z-index:6;transform:translateY(6px) scale(.975);filter:drop-shadow(0 0 12px #ffe37d) drop-shadow(0 0 28px #d69b28cc) drop-shadow(0 8px 10px #0008)}
 .game-ui .door.selected::after{content:'';position:absolute;z-index:1;inset:15% 8% 12%;border:2px solid #ffe69b;border-radius:48% 48% 18% 18%;box-shadow:inset 0 0 18px #ffe18a88,0 0 18px #ffd565cc;pointer-events:none;animation:door-rune-flare .58s ease-out both}
 .game-ui .door.selected .plaque{z-index:2;border-color:#ffe49a;box-shadow:0 0 0 2px #9a692dbb,0 0 18px #ffd466aa;background:#f7e6b4}
+.game-ui .door.selected-wrong{filter:drop-shadow(0 0 12px #ff6d62) drop-shadow(0 0 28px #c6243dcc) drop-shadow(0 8px 10px #0008)}
+.game-ui .door.selected-wrong::after{border-color:#ff8d7d;box-shadow:inset 0 0 18px #ff665a99,0 0 18px #f03e51dd}
+.game-ui .door.selected-wrong .plaque{border-color:#ff9582;box-shadow:0 0 0 2px #8f2d35cc,0 0 18px #ef4a55bb;background:#f5cec0}
 @keyframes door-rune-flare{0%{opacity:0;scale:.88}42%{opacity:1;scale:1.035}100%{opacity:.82;scale:1}}
 @media(prefers-reduced-motion:reduce){.game-ui .door,.game-ui .door.selected::after{transition:none;animation:none}.game-ui .door.selected{transform:none}}
 
