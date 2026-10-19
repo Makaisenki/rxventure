@@ -11,7 +11,7 @@ export async function onRequestGet({ request, env }) {
   if (!bankResponse.ok) return new Response(JSON.stringify({ error: 'Unable to load active question bank.' }), { status: 503, headers: { 'content-type': 'application/json' } });
   const [bank] = await bankResponse.json();
   const attemptResponse = bank ? await supabase(env, `question_attempts?question_bank_id=eq.${encodeURIComponent(bank.id)}&select=question_id,category,prompt,branch_name,role,correct,created_at&order=created_at.asc&limit=100000`) : null;
-  const playthroughResponse = bank && format === 'runs' ? await supabase(env, `playthroughs?question_bank_id=eq.${encodeURIComponent(bank.id)}&select=branch_name,player_name,score,completed,started_at&order=started_at.asc&limit=100000`) : null;
+  const playthroughResponse = bank && format === 'runs' ? await supabase(env, `playthroughs?question_bank_id=eq.${encodeURIComponent(bank.id)}&finished_at=not.is.null&select=branch_name,player_name,score,completed,started_at&order=started_at.asc&limit=100000`) : null;
   if ((attemptResponse && !attemptResponse.ok) || (playthroughResponse && !playthroughResponse.ok)) return new Response(JSON.stringify({ error: 'Unable to load learning-insights data.' }), { status: 503, headers: { 'content-type': 'application/json' } });
   const attempts = attemptResponse ? await attemptResponse.json() : [];
   const playthroughs = playthroughResponse ? await playthroughResponse.json() : [];
