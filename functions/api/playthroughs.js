@@ -1,5 +1,6 @@
 import { allowAttempt, json, ROLES, supabase } from '../_lib.js';
 
+const MAX_SCORE = 6000;
 const validName = (value) => typeof value === 'string' && /^[\p{L}\p{N} _.-]{1,16}$/u.test(value.trim());
 const validId = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -22,7 +23,7 @@ export async function onRequestPost({ request, env }) {
 
 export async function onRequestPatch({ request, env }) {
   const { id, score, completed } = await request.json().catch(() => ({}));
-  if (!validId(id) || !Number.isInteger(score) || score < 0 || score > 3000 || typeof completed !== 'boolean') return json({ error: 'Invalid playthrough result.' }, 400);
+  if (!validId(id) || !Number.isInteger(score) || score < 0 || score > MAX_SCORE || typeof completed !== 'boolean') return json({ error: 'Invalid playthrough result.' }, 400);
   const response = await supabase(env, `playthroughs?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ score, completed, finished_at: new Date().toISOString() }) });
   return response.ok ? json({ ok: true }) : json({ error: 'Unable to save the playthrough result.' }, 503);
 }

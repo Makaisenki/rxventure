@@ -1,5 +1,7 @@
 import { allowSubmission, json, ROLES, supabase } from '../_lib.js';
 
+const MAX_SCORE = 6000;
+
 export async function onRequestGet({ request, env }) {
   const role = new URL(request.url).searchParams.get('role');
   if (!ROLES.includes(role)) return json({ error: 'Invalid role.' }, 400);
@@ -14,7 +16,7 @@ export async function onRequestPost({ request, env }) {
   const { role, name, score, branch } = await request.json().catch(() => ({}));
   const nickname = typeof name === 'string' ? name.trim() : '';
   const branchName = typeof branch === 'string' ? branch.trim() : '';
-  if (!ROLES.includes(role) || !/^[\p{L}\p{N} _.-]{1,16}$/u.test(nickname) || (branchName && (branchName.length > 80 || /[<>]/.test(branchName))) || !Number.isInteger(score) || score < 0 || score > 3000) return json({ error: 'Invalid score submission.' }, 400);
+  if (!ROLES.includes(role) || !/^[\p{L}\p{N} _.-]{1,16}$/u.test(nickname) || (branchName && (branchName.length > 80 || /[<>]/.test(branchName))) || !Number.isInteger(score) || score < 0 || score > MAX_SCORE) return json({ error: 'Invalid score submission.' }, 400);
   const response = await supabase(env, 'leaderboard_entries', { method: 'POST', headers: { 'content-type': 'application/json', prefer: 'return=representation' }, body: JSON.stringify({ role, nickname, branch_name: branchName || null, score }) });
   if (!response.ok) return json({ error: 'Unable to save score.' }, 503);
   const [entry] = await response.json();
