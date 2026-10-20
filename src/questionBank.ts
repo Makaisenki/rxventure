@@ -25,38 +25,41 @@ const aliases: Record<string, string> = {
 };
 const canon = (value: string) => aliases[value.trim().toLowerCase()] ?? value.trim().toLowerCase();
 
-function parseBlock(category: string, source: string): Question[] {
-  const blocks = source.split(/(?=^Question\s+\d+)/m).filter(Boolean);
-  return blocks.flatMap((block, index) => {
-    const answer = block.match(/✅\s*Answer:\s*([A-D])/i)?.[1]?.toUpperCase();
-    const firstOption = block.search(/^A\.\s*/m);
-    if (!answer || firstOption < 0) return [];
-    const prompt = block.slice(0, firstOption).replace(/^Question\s+\d+\s*/i, '').trim();
-    const choiceText = block.slice(firstOption).replace(/✅\s*Answer:[\s\S]*/i, '');
-    const matches = [...choiceText.matchAll(/^([A-D])\.\s*([\s\S]*?)(?=^[A-D]\.\s*|$)/gm)];
-    const values = matches.map((match) => match[2].trim().replace(/\n+/g, ' '));
-    return values.length === 4 ? [{ id: `${canon(category)}-${index}-${prompt.slice(0, 20)}`, category, prompt, options: values, answer }] : [];
-  });
-}
-
 export function parseWorkbook(data: ArrayBuffer): Bank {
   const workbook = XLSX.read(data, { type: 'array' });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   if (!sheet) throw new Error('The workbook does not contain a worksheet.');
   const rows = XLSX.utils.sheet_to_json<(string | undefined)[]>(sheet, { header: 1, defval: '' });
-  const header = rows[1] ?? [];
-  const requirements = rows[2] ?? [];
-  const mappedRoles = {} as Record<Role, string[]>;
-  for (const role of roles) {
-    const acceptedHeaders = roleHeaderAliases[role].map(normalizeHeader);
-    const column = header.findIndex((cell) => acceptedHeaders.includes(normalizeHeader(String(cell))));
-    if (column < 0) throw new Error(`Missing role column: ${role}`);
-    mappedRoles[role] = String(requirements[column] ?? '').split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+  const header = rows[0] ?? [];
+  const requirements = rows[1] ?? [];
+  const questionHeaders = rows[4] ?? [];
+  const expectedQuestionHeaders = ['Category', 'Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Answer'];
+  if (normalizeHeader(String(header[0] ?? '')) !== 'job role' || normalizeHeader(String(requirements[0] ?? '')) !== 'required question categories') {
+    throw new Error('Use the current question-bank layout: job roles on row 1 and required categories on row 2.');
   }
-  const questions = rows.slice(5).flatMap((row) => {
+  if (!expectedQuestionHeaders.every((label, column) => normalizeHeader(String(questionHeaders[column] ?? '')) === normalizeHeader(label))) {
+    throw new Error('Use the current question table headers on row 5: Category, Question, Option A, Option B, Option C, Option D, Answer.');
+  }
+  const mappedRoles = {} as Record<Role, string[]>;
+  for (const [roleIndex, role] of roles.entries()) {
+    const acceptedHeaders = roleHeaderAliases[role].map(normalizeHeader);
+    const column = roleIndex + 1;
+    if (!acceptedHeaders.includes(normalizeHeader(String(header[column] ?? '')))) throw new Error(`Missing role column: ${role}`);
+    mappedRoles[role] = String(requirements[column] ?? '').split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+    if (!mappedRoles[role].length) throw new Error(`Add at least one required question category for ${role}.`);
+  }
+  const questions = rows.slice(5).flatMap((row, index) => {
     const category = String(row[0] ?? '').trim();
-    const block = String(row[1] ?? '');
-    return category && block ? parseBlock(category, block) : [];
+    const prompt = String(row[1] ?? '').trim();
+    const options = [2, 3, 4, 5].map((column) => String(row[column] ?? '').trim());
+    const answer = String(row[6] ?? '').trim().toUpperCase();
+    const hasQuestionData = [category, prompt, ...options, answer].some(Boolean);
+    if (!hasQuestionData) return [];
+    const rowNumber = index + 6;
+    if (!category || !prompt || options.some((option) => !option) || !/^[A-D]$/.test(answer)) {
+      throw new Error(`Question row ${rowNumber} must include a category, question, four options, and an answer from A to D.`);
+    }
+    return [{ id: `${canon(category)}-${rowNumber}-${prompt.slice(0, 20)}`, category, prompt, options, answer }];
   });
   if (questions.length < RUN_QUESTION_COUNT) throw new Error(`The workbook must contain at least ${RUN_QUESTION_COUNT} valid questions.`);
   for (const role of roles) {
