@@ -7,9 +7,24 @@ type View = 'disclaimer' | 'title' | 'prologue' | 'branch' | 'roles' | 'game' | 
 type Trap = 'arrows' | 'boulders' | 'axe';
 const KEY = { settings: 'rxventure-settings' };
 const app = document.querySelector<HTMLDivElement>('#app')!;
+const preloadAssets = [
+  '/assets/treasure-vault-background.png', '/assets/trap-pendulum-axe.png', '/assets/trap-boulder.png', '/assets/trap-arrows.png',
+  '/assets/role-technician.png', '/assets/role-technician-injured.png', '/assets/role-technician-happy.png',
+  '/assets/role-storekeeper.png', '/assets/role-storekeeper-injured.png', '/assets/role-storekeeper-happy.png',
+  '/assets/role-retail.png', '/assets/role-retail-injured.png', '/assets/role-retail-happy.png',
+  '/assets/role-pharmacist.png', '/assets/role-pharmacist-injured.png', '/assets/role-pharmacist-happy.png',
+  '/assets/medicine-chest.png', '/assets/main-panorama.png', '/assets/magic-door.png', '/assets/gilded-scroll.png',
+  '/assets/gilded-noticeboard.png', '/assets/door-vault.png', '/assets/door-library.png', '/assets/door-crystal.png',
+  '/assets/door-castle.png', '/assets/biome-1.png', '/assets/biome-2.png', '/assets/biome-3.png', '/assets/biome-4.png', '/assets/biome-5.png',
+];
+const preloadTotal = preloadAssets.length + 1;
 let bank: Bank;
 let defaultBank: Bank;
 let view: View = 'disclaimer';
+let preloadCompleted = 0;
+let preloadReady = false;
+let preloadError = '';
+let preloadRunning = false;
 let chosenRole: Role;
 let run: Question[] = [];
 let index = 0, score = 0, lives = 5, timeLeft = 10, graceLeft = 6, timer: number | undefined;
@@ -167,7 +182,15 @@ function render() {
   syncMusicForView();
 }
 
-const disclaimer = () => `<section class="panel disclaimer"><p class="eyebrow">Before you begin</p><h2>Disclaimer</h2><p>This game is for educational purposes only.</p><button class="primary" data-go="title">Continue</button></section>`;
+const disclaimer = () => {
+  const progress = Math.round((preloadCompleted / preloadTotal) * 100);
+  const loadingMessage = preloadError
+    ? 'A required dungeon resource could not be loaded. Check your connection and try again.'
+    : preloadReady
+      ? 'The dungeon is ready.'
+      : `Preparing your dungeon… ${preloadCompleted} of ${preloadTotal}`;
+  return `<section class="panel disclaimer"><p class="eyebrow">Before you begin</p><h2>Disclaimer</h2><p>This game is for educational purposes only.</p><div class="loading-status" aria-live="polite"><p>${loadingMessage}</p><div class="loading-track" role="progressbar" aria-label="Game loading progress" aria-valuemin="0" aria-valuemax="${preloadTotal}" aria-valuenow="${preloadCompleted}"><span style="width:${progress}%"></span></div><small>${progress}% loaded</small></div>${preloadError ? '<button class="primary" data-retry-loading>Retry loading</button>' : preloadReady ? '<button class="primary" data-go="title">Continue</button>' : '<button class="primary" disabled>Loading…</button>'}</section>`;
+};
 const title = () => `<section class="hero"><p class="eyebrow">A pharmacy quest for knowledge</p><h1>RxVenture <span>Dungeon</span></h1><p class="lede">Seek the sacred treasure. Choose wisely. Make your pharmacy legendary.</p>${cloudOnline ? '' : '<p class="cloud-status">Offline mode: shared scores are unavailable.</p>'}<button class="primary" data-go="prologue">Start quest</button><nav><button data-go="leaderboard">Leaderboard</button><button data-settings>Settings</button></nav><button class="crest" aria-label="Administration" data-admin>✦</button></section>`;
 const prologue = () => `<section class="panel story"><p class="eyebrow">The call to adventure</p><h2>The kingdom needs your knowledge.</h2><p>Deep in the enchanted dungeon rests a treasure that will make your pharmacy the most prestigious in the realm.</p><p>Answer swiftly. Choose the right doors. Protect your five lives.</p><button class="primary" data-open-branch>Choose your role</button></section>`;
 const branchSelection = () => `<section class="panel branch-selection"><p class="eyebrow">Before you enter</p><h2>Select your Branch</h2>${branchError ? `<p class="pin-error" role="alert">${branchError}</p>` : ''}${branchesOnline && branches.length ? `<label for="branch-select">Branch<select id="branch-select" data-branch-select><option value="">Select your branch</option>${branches.map((branch) => `<option value="${branch.id}">${branch.name}</option>`).join('')}</select></label><label for="player-name">Player name<input id="player-name" data-player-name maxlength="16" autocomplete="nickname" value="${playerName}" required/></label><button class="primary" data-confirm-branch disabled>Continue to character selection</button>` : `<p class="cloud-status">${branchesOnline ? 'No active branches have been configured. Please ask an administrator to set up branches before playing.' : 'Branch tracking is unavailable. Reconnect and try again.'}</p>`}<button data-go="prologue">Back</button></section>`;
@@ -211,6 +234,7 @@ const gameover = () => `<section class="panel"><p class="eyebrow">The dungeon pr
 
 function bind(layer: Element) {
   layer.querySelectorAll<HTMLElement>('[data-go]').forEach((button) => button.onclick = () => { stopTimer(); document.body.dataset.paused = 'false'; view = button.dataset.go as View; render(); if (view === 'leaderboard') showScores(0); });
+  layer.querySelector<HTMLElement>('[data-retry-loading]')?.addEventListener('click', () => { void bootstrap(); });
   layer.querySelector<HTMLElement>('[data-open-branch]')?.addEventListener('click', () => { void openBranchSelection(); });
   const branchSelect = layer.querySelector<HTMLSelectElement>('[data-branch-select]');
   const playerNameInput = layer.querySelector<HTMLInputElement>('[data-player-name]');
@@ -268,5 +292,53 @@ function discardCurrentRun() { const runId = currentRunId; currentRunId = null; 
 function publishVictory() { void finishCurrentRun(true); void submitScore(chosenRole, playerName, score, chosenBranch?.name).then(({ rank }) => { leaderboardRank = rank; if (view === 'victory') render(); }).catch((error) => { scoreSubmissionError = error instanceof Error ? error.message : 'Your run finished, but the leaderboard could not be updated.'; if (view === 'victory') render(); }); }
 function answer(correct: boolean) { const question = run[index]; if (activeBankId && chosenBranch) void recordAttempt({ bankId: activeBankId, branchId: chosenBranch.id, role: chosenRole, questionId: question.id, category: question.category, prompt: question.prompt, correct, runId: currentRunId ?? undefined }).catch(() => { /* A run starts only when tracking is online; keep gameplay responsive if the connection drops later. */ }); stopTimer(); resolving = true; reaction = correct ? 'correct' : 'wrong'; if (correct) playCorrect(); else { activeTrap = ['arrows', 'boulders', 'axe'][Math.floor(Math.random() * 3)] as Trap; playTrap(activeTrap); damageFlash(); } if (correct) { const timeBonus = graceLeft > 0 ? 100 : Math.min(100, Math.max(0, Math.ceil(timeLeft * 10))); score += 100 + timeBonus; } else lives -= 1; render(); window.setTimeout(() => { reaction = 'idle'; activeTrap = null; resolving = false; selectedDoor = -1; selectedDoorWrong = false; if (!correct && lives <= 0) { void finishCurrentRun(false); playGameOver(); stopMusic(); view = 'gameover'; render(); return; } index += 1; if (index >= RUN_QUESTION_COUNT) { view = 'victory'; playTreasureFanfare(); render(); publishVictory(); return; } if (index % QUESTIONS_PER_BIOME === 0) playBiomeTransition(); displayedOptions = shuffler(run[index]); render(); beginTimer(); }, correct ? 650 : 1250); }
 
-async function bootstrap() { const response = await fetch('/question-bank.xlsx'); defaultBank = parseWorkbook(await response.arrayBuffer()); try { const active = await fetchActiveBank(); bank = active?.data ?? defaultBank; activeBankId = active?.id ?? null; cloudOnline = Boolean(active); } catch { bank = defaultBank; cloudOnline = false; activeBankId = null; } render(); }
-bootstrap().catch((error) => { app.innerHTML = `<pre>Unable to load question bank: ${error instanceof Error ? error.message : String(error)}</pre>`; });
+function updatePreloadProgress() { if (view === 'disclaimer') render(); }
+function loadImageAsset(source: string) {
+  return new Promise<string | null>((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(null);
+    image.onerror = () => resolve(source);
+    image.src = source;
+  });
+}
+async function loadDefaultQuestionBank() {
+  try {
+    const response = await fetch('/question-bank.xlsx', { cache: 'force-cache' });
+    if (!response.ok) throw new Error(`Question bank could not be downloaded (${response.status}).`);
+    return parseWorkbook(await response.arrayBuffer());
+  } finally {
+    preloadCompleted += 1;
+    updatePreloadProgress();
+  }
+}
+async function bootstrap() {
+  if (preloadRunning) return;
+  preloadRunning = true;
+  preloadCompleted = 0;
+  preloadReady = false;
+  preloadError = '';
+  render();
+  const imageLoads = preloadAssets.map(async (source) => {
+    const failed = await loadImageAsset(source);
+    preloadCompleted += 1;
+    updatePreloadProgress();
+    return failed;
+  });
+  const [defaultBankResult, imageResults] = await Promise.allSettled([loadDefaultQuestionBank(), Promise.all(imageLoads)]);
+  const failedAssets = imageResults.status === 'fulfilled' ? imageResults.value.filter((asset): asset is string => Boolean(asset)) : preloadAssets;
+  if (defaultBankResult.status === 'rejected' || failedAssets.length) {
+    preloadError = defaultBankResult.status === 'rejected'
+      ? defaultBankResult.reason instanceof Error ? defaultBankResult.reason.message : 'The question bank could not be loaded.'
+      : `${failedAssets.length} required game asset${failedAssets.length === 1 ? '' : 's'} could not be loaded.`;
+    preloadRunning = false;
+    render();
+    return;
+  }
+  defaultBank = defaultBankResult.value;
+  try { const active = await fetchActiveBank(); bank = active?.data ?? defaultBank; activeBankId = active?.id ?? null; cloudOnline = Boolean(active); }
+  catch { bank = defaultBank; cloudOnline = false; activeBankId = null; }
+  preloadReady = true;
+  preloadRunning = false;
+  render();
+}
+void bootstrap();
