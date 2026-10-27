@@ -70,6 +70,12 @@ body.admin-page{background:#4a1028}body.admin-page .ui-layer{background:linear-g
 .hero{width:100%;max-width:none;margin:0;background:transparent}.hero::before{content:none!important;display:none!important;background:none!important;box-shadow:none!important}.hero::after{inset:0;transform:scale(1.08)}
 .hero::after{background:linear-gradient(#081b39b8,#081b39b8),url('/assets/main-panorama.png') center/cover no-repeat}
 
+/* Keep the administrator entrance available without competing with the
+   player-facing quest controls. Keyboard focus deliberately reveals it. */
+.hero .crest{right:10px!important;bottom:10px;width:26px;height:26px;padding:0;border:0;background:transparent;color:#cdd7e3;font-size:.7rem;opacity:.3;box-shadow:none;transition:opacity .18s ease,transform .18s ease}
+.hero .crest:hover,.hero .crest:focus-visible{opacity:.92;transform:scale(1.18)}
+.hero .crest:focus-visible{outline:2px solid #f7e8b8;outline-offset:3px}
+
 /* The title can be taller than the browser viewport on mobile.  Keep the
    underlying document and its scrollable layer the same navy as the panorama
    overlay, so no differently-coloured canvas can appear below the hero. */
