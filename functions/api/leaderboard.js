@@ -1,6 +1,6 @@
 import { allowSubmission, json, ROLES, supabase } from '../_lib.js';
 
-const MAX_SCORE = 6000;
+const MAX_SCORE = 10000;
 
 export async function onRequestGet({ request, env }) {
   const role = new URL(request.url).searchParams.get('role');

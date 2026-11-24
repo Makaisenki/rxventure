@@ -1,6 +1,6 @@
 import { allowAttempt, json, ROLES, supabase } from '../_lib.js';
 
-const MAX_SCORE = 6000;
+const MAX_SCORE = 10000;
 const validName = (value) => typeof value === 'string' && /^[\p{L}\p{N} _.-]{1,16}$/u.test(value.trim());
 const validId = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
