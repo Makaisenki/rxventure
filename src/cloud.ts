@@ -8,6 +8,7 @@ export type PlaythroughInput = { bankId: string; branchId: string; role: Role; p
 export type InsightBranch = { id: string; name: string; attempts: number; incorrect: number; incorrectRate: number | null };
 export type InsightQuestion = { id: string; category: string; prompt: string; attempts: number; incorrect: number; incorrectRate: number; branches: InsightBranch[] };
 export type LearningInsights = { bankId: string | null; minimumAttempts: number; questions: InsightQuestion[] };
+export type GameSettings = { questionCount: number };
 const TOKEN_KEY = 'rxventure-admin-token';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '') ?? '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
@@ -25,6 +26,7 @@ function adminHeaders() {
 }
 
 export async function fetchActiveBank(): Promise<ActiveBank | null> { try { return (await api<{ bank: ActiveBank | null }>('question-bank')).bank; } catch { return null; } }
+export async function fetchGameSettings(): Promise<GameSettings> { return api<GameSettings>('game-settings'); }
 export async function fetchBranches(): Promise<Branch[]> { return (await api<{ branches: Branch[] }>('branches')).branches; }
 export async function recordAttempt(attempt: AttemptInput) { return api<{ ok: boolean }>('attempts', { method: 'POST', body: JSON.stringify(attempt) }); }
 export async function fetchScores(role: Role): Promise<CloudScore[]> { return (await api<{ entries: CloudScore[] }>(`leaderboard?role=${encodeURIComponent(role)}`)).entries; }
@@ -54,6 +56,7 @@ export async function uploadBank(bank: Bank, workbook: File) {
 export async function restoreBundledBank(bank: Bank) { return api<{ ok: boolean; id: string }>('admin/restore-bundled', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ bank }) }); }
 export async function clearLeaderboards() { return api<{ ok: boolean }>('admin/leaderboards', { method: 'DELETE', headers: adminHeaders() }); }
 export async function clearLearningInsights() { return api<{ ok: boolean }>('admin/insights', { method: 'DELETE', headers: adminHeaders() }); }
+export async function updateGameSettings(questionCount: number) { return api<GameSettings>('admin/game-settings', { method: 'PATCH', headers: adminHeaders(), body: JSON.stringify({ questionCount }) }); }
 export async function fetchAdminBranches() { return (await api<{ branches: Branch[] }>('admin/branches', { headers: adminHeaders() })).branches; }
 export async function createBranch(name: string, position: number) { return (await api<{ branch: Branch }>('admin/branches', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ name, position }) })).branch; }
 export async function updateBranch(id: string, update: Partial<Pick<Branch, 'name' | 'active' | 'position'>>) { return (await api<{ branch: Branch }>('admin/branches', { method: 'PATCH', headers: adminHeaders(), body: JSON.stringify({ id, ...update }) })).branch; }

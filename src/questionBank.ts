@@ -4,8 +4,8 @@ export type Role = 'Pharmacist' | 'Pharmacy Technician/Executive/Assistant' | 'S
 export type Question = { id: string; category: string; prompt: string; options: string[]; answer: string };
 export type Bank = { roles: Record<Role, string[]>; questions: Question[] };
 
-export const RUN_QUESTION_COUNT = 30;
-export const QUESTIONS_PER_BIOME = 6;
+export const MAX_RUN_QUESTION_COUNT = 30;
+export const BIOME_COUNT = 5;
 
 const roles = ['Pharmacist', 'Pharmacy Technician/Executive/Assistant', 'Storekeeper/Health Assistant', 'Retail Staff'] as const;
 // Workbook authors may use the shorter label shown on the character-selection
@@ -61,9 +61,9 @@ export function parseWorkbook(data: ArrayBuffer): Bank {
     }
     return [{ id: `${canon(category)}-${rowNumber}-${prompt.slice(0, 20)}`, category, prompt, options, answer }];
   });
-  if (questions.length < RUN_QUESTION_COUNT) throw new Error(`The workbook must contain at least ${RUN_QUESTION_COUNT} valid questions.`);
+  if (questions.length < MAX_RUN_QUESTION_COUNT) throw new Error(`The workbook must contain at least ${MAX_RUN_QUESTION_COUNT} valid questions.`);
   for (const role of roles) {
-    if (eligibleQuestions({ roles: mappedRoles, questions }, role).length < RUN_QUESTION_COUNT) throw new Error(`${role} has fewer than ${RUN_QUESTION_COUNT} eligible questions.`);
+    if (eligibleQuestions({ roles: mappedRoles, questions }, role).length < MAX_RUN_QUESTION_COUNT) throw new Error(`${role} has fewer than ${MAX_RUN_QUESTION_COUNT} eligible questions.`);
   }
   return { roles: mappedRoles, questions };
 }
@@ -73,7 +73,7 @@ export function eligibleQuestions(bank: Bank, role: Role) {
   return bank.questions.filter((question) => allowed.has(canon(question.category)));
 }
 
-export function selectRun(bank: Bank, role: Role, count = RUN_QUESTION_COUNT): Question[] {
+export function selectRun(bank: Bank, role: Role, count = MAX_RUN_QUESTION_COUNT): Question[] {
   const pool = eligibleQuestions(bank, role);
   const groups = new Map<string, Question[]>();
   pool.forEach((question) => { const key = canon(question.category); groups.set(key, [...(groups.get(key) ?? []), question]); });
