@@ -7,7 +7,7 @@ export async function onRequestPost({ request, env }) {
   const workbook = form?.get('workbook');
   let bank;
   try { bank = JSON.parse(String(form?.get('bank') ?? '')); } catch { bank = null; }
-  if (!isValidBank(bank)) return json({ error: 'The workbook does not contain a valid 50-question pool for every role.' }, 400);
+  if (!isValidBank(bank)) return json({ error: 'The workbook must contain at least five eligible questions for every role.' }, 400);
   if (!(workbook instanceof File) || workbook.size === 0 || workbook.size > 10_000_000) return json({ error: 'Upload an Excel workbook smaller than 10 MB.' }, 400);
   const safeName = sourceName.replace(/[^a-zA-Z0-9._-]+/g, '-');
   const sourcePath = `question-banks/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
