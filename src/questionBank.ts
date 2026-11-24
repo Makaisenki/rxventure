@@ -4,7 +4,7 @@ export type Role = 'Pharmacist' | 'Pharmacy Technician/Executive/Assistant' | 'S
 export type Question = { id: string; category: string; prompt: string; options: string[]; answer: string };
 export type Bank = { roles: Record<Role, string[]>; questions: Question[] };
 
-export const MAX_RUN_QUESTION_COUNT = 30;
+export const MAX_RUN_QUESTION_COUNT = 50;
 export const BIOME_COUNT = 5;
 
 const roles = ['Pharmacist', 'Pharmacy Technician/Executive/Assistant', 'Storekeeper/Health Assistant', 'Retail Staff'] as const;
