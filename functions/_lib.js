@@ -1,4 +1,12 @@
 const ROLES = ['Pharmacist', 'Pharmacy Technician/Executive/Assistant', 'Storekeeper/Health Assistant', 'Retail Staff'];
+const MIN_RUN_QUESTION_COUNT = 5;
+const MAX_RUN_QUESTION_COUNT = 50;
+const CATEGORY_ALIASES = {
+  'code grey': 'code grey / blue', 'code blue': 'code grey / blue',
+  'returning controlled drug (cd)': 'returning controlled drugs',
+  'automation & pharmacy systems': 'opas',
+};
+const canonicalCategory = (value) => CATEGORY_ALIASES[String(value).trim().toLowerCase()] ?? String(value).trim().toLowerCase();
 const rateWindow = new Map();
 const attemptRateWindow = new Map();
 
@@ -23,9 +31,19 @@ export async function requireAdmin(request, env) {
   return user.email?.toLowerCase() === env.ADMIN_EMAIL.toLowerCase();
 }
 
+export function maximumSupportedRunLength(bank) {
+  if (!bank?.roles || !Array.isArray(bank.questions)) return 0;
+  const eligibleCounts = ROLES.map((role) => {
+    if (!Array.isArray(bank.roles[role])) return 0;
+    const categories = new Set(bank.roles[role].map(canonicalCategory));
+    return bank.questions.filter((question) => categories.has(canonicalCategory(question.category))).length;
+  });
+  return Math.min(MAX_RUN_QUESTION_COUNT, Math.floor(Math.min(...eligibleCounts) / MIN_RUN_QUESTION_COUNT) * MIN_RUN_QUESTION_COUNT);
+}
+
 export function isValidBank(bank) {
-  if (!bank || !Array.isArray(bank.questions) || !bank.roles || bank.questions.length < 50) return false;
-  return ROLES.every((role) => Array.isArray(bank.roles[role]) && bank.questions.filter((question) => bank.roles[role].map((item) => String(item).trim().toLowerCase()).includes(String(question.category).trim().toLowerCase())).length >= 50)
+  if (!bank || !Array.isArray(bank.questions) || !bank.roles || bank.questions.length < MIN_RUN_QUESTION_COUNT) return false;
+  return maximumSupportedRunLength(bank) >= MIN_RUN_QUESTION_COUNT
     && bank.questions.every((question) => typeof question.id === 'string' && typeof question.prompt === 'string' && Array.isArray(question.options) && question.options.length === 4 && /^[A-D]$/.test(question.answer));
 }
 
