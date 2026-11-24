@@ -6,6 +6,7 @@ export type Bank = { roles: Record<Role, string[]>; questions: Question[] };
 
 export const MAX_RUN_QUESTION_COUNT = 50;
 export const BIOME_COUNT = 5;
+export const MIN_RUN_QUESTION_COUNT = BIOME_COUNT;
 
 const roles = ['Pharmacist', 'Pharmacy Technician/Executive/Assistant', 'Storekeeper/Health Assistant', 'Retail Staff'] as const;
 // Workbook authors may use the shorter label shown on the character-selection
@@ -61,9 +62,9 @@ export function parseWorkbook(data: ArrayBuffer): Bank {
     }
     return [{ id: `${canon(category)}-${rowNumber}-${prompt.slice(0, 20)}`, category, prompt, options, answer }];
   });
-  if (questions.length < MAX_RUN_QUESTION_COUNT) throw new Error(`The workbook must contain at least ${MAX_RUN_QUESTION_COUNT} valid questions.`);
+  if (questions.length < MIN_RUN_QUESTION_COUNT) throw new Error(`The workbook must contain at least ${MIN_RUN_QUESTION_COUNT} valid questions.`);
   for (const role of roles) {
-    if (eligibleQuestions({ roles: mappedRoles, questions }, role).length < MAX_RUN_QUESTION_COUNT) throw new Error(`${role} has fewer than ${MAX_RUN_QUESTION_COUNT} eligible questions.`);
+    if (eligibleQuestions({ roles: mappedRoles, questions }, role).length < MIN_RUN_QUESTION_COUNT) throw new Error(`${role} has fewer than ${MIN_RUN_QUESTION_COUNT} eligible questions.`);
   }
   return { roles: mappedRoles, questions };
 }
@@ -71,6 +72,11 @@ export function parseWorkbook(data: ArrayBuffer): Bank {
 export function eligibleQuestions(bank: Bank, role: Role) {
   const allowed = new Set(bank.roles[role].map(canon));
   return bank.questions.filter((question) => allowed.has(canon(question.category)));
+}
+
+export function maximumSupportedRunLength(bank: Bank) {
+  const shortestRolePool = Math.min(...roles.map((role) => eligibleQuestions(bank, role).length));
+  return Math.min(MAX_RUN_QUESTION_COUNT, Math.floor(shortestRolePool / BIOME_COUNT) * BIOME_COUNT);
 }
 
 export function selectRun(bank: Bank, role: Role, count = MAX_RUN_QUESTION_COUNT): Question[] {
